@@ -1,0 +1,29 @@
+{
+    "callsign": "N0CALL",
+    "passcode": "xxxxx",
+    "lora": {
+        "offsetppm": 0,
+        "gain_rx": 0,
+        "power": 2,
+        "coding_rate4": 5,
+        "tx_enable": false
+    },
+    "digi": {
+        "uitrace": "WIDE1"
+    },
+    "wifi": {
+        "SSID": "WIFISSID",
+        "password": "WIFIPWD"
+    },
+    "aprs_is": {
+        "server": "rotate.aprs2.net",
+        "port": 14580
+    },
+    "beacon": {
+        "message": "LoRaAPRS",
+        "latitude": 35.00,
+        "longitude": 135.00,
+        "ambiguity": 0,
+        "timeoutSec": 120
+    }
+}

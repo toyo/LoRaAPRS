@@ -9,6 +9,7 @@
 #elif defined(ARDUINO_T_Beam)
 #define ENABLE_GPS
 #define ENABLE_U8G2
+#define XPOWERS_CHIP_AXP192
 #define BUTTON1 38
 #define PMU_IRQ 35
 

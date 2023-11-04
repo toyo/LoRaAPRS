@@ -17,7 +17,9 @@
 
 Config c;
 
+#if defined(XPOWERS_CHIP_AXP192)
 PMUTask PMU;
+#endif
 WiFiTask Wifi;
 SX1278Task LoRa;
 GPSTask GPS;
@@ -34,8 +36,9 @@ void setup() {
 
   c.begin();
 
-  Wire.begin((int)SDA, (int)SCL);
+#if defined(XPOWERS_CHIP_AXP192)
   PMU.setup();
+#endif
   OLED.setup();
 
   LoRa.setup(c.channel.frequency * (c.lora.offsetppm * 1e-6 + 1), c.channel.bandwidth, c.channel.spreading_factor,
@@ -62,7 +65,9 @@ void setup() {
 }
 
 void loop() {
+#if defined(XPOWERS_CHIP_AXP192)
   PMU.loop();
+#endif
   OLED.loop();
   GPS.loop();
 

@@ -153,11 +153,13 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
 
   Serial.println(F("Setting done."));
 
-  sx->setDio0Action([]() {
-    for (int i = 0; i < numOfHandle; i++) {
-      *Handles[i] = true;
-    }
-  });
+  sx->setDio0Action(
+      []() {
+        for (int i = 0; i < numOfHandle; i++) {
+          *Handles[i] = true;
+        }
+      },
+      RISING);
 
   if (enableRX) {
     state = sx->startReceive();

@@ -10,7 +10,6 @@
 #include "GPSTask.h"
 #include "MyBeaconTask.h"
 #include "OLEDTask.h"
-#include "PMUTask.h"
 #include "SX1278Task.h"
 #include "WiFiTask.h"
 #include "config.h"
@@ -18,7 +17,8 @@
 Config c;
 
 #if defined(XPOWERS_CHIP_AXP192)
-PMUTask PMU;
+#include "AXP192Task.h"
+AXP192Task AXP192;
 #endif
 WiFiTask Wifi;
 SX1278Task LoRa;
@@ -48,7 +48,7 @@ void setup() {
   c.begin();
 
 #if defined(XPOWERS_CHIP_AXP192)
-  PMU.setup();
+  AXP192.setup();
 #endif
   OLED.setup();
 
@@ -77,7 +77,7 @@ void setup() {
 
 void loop() {
 #if defined(XPOWERS_CHIP_AXP192)
-  PMU.loop();
+  AXP192.loop();
 #endif
   OLED.loop();
   GPS.loop();

@@ -1,12 +1,7 @@
 #include "boards.h"
 
-#if defined(XPOWERS_CHIP_AXP192)
-
-
-class PMUTask {
+class AXP192Task {
  public:
   bool setup();
   bool loop();
 };
-
-#endif

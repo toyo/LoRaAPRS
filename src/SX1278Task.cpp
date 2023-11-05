@@ -142,7 +142,17 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
     }
   }
 
-  sx->setRfSwitchPins(RADIOLIB_NC, RADIOLIB_NC);
+#ifdef RFSWITCH
+  // In global scope, define the pin array and mode table
+  static const uint32_t rfswitch_pins[] = {RFSWITCH, RADIOLIB_NC, RADIOLIB_NC};
+  static const Module::RfSwitchMode_t rfswitch_table[] = {
+      {Module::MODE_IDLE, {RFNOTX}},
+      {Module::MODE_RX, {RFNOTX}},
+      {Module::MODE_TX, {RFTX}},
+      END_OF_MODE_TABLE,
+  };
+  sx->setRfSwitchTable(rfswitch_pins, rfswitch_table);
+#endif
 
   state = sx->setCRC(true);
   if (state != RADIOLIB_ERR_NONE) {

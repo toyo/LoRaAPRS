@@ -1,3 +1,6 @@
+#ifndef OLEDTask_h
+#define OLEDTask_h
+
 #include "APRS.h"
 
 class OLEDTask {
@@ -14,3 +17,4 @@ class OLEDTask {
   bool setup();
   bool loop();
 };
+#endif

@@ -1,3 +1,6 @@
+#ifndef AX25UITask_h
+#define AX25UITask_h
+
 #include <list>
 #include <set>
 
@@ -28,3 +31,4 @@ class AX25UITask {
 
   size_t TXQueueSize();
 };
+#endif

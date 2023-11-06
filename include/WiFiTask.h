@@ -1,3 +1,6 @@
+#ifndef WiFiTask_h
+#define WiFiTask_h
+
 #include "boards.h"
 
 #ifdef ENABLE_WIFI
@@ -38,3 +41,4 @@ class WiFiTask {
   std::list<Payload> RXQueue;
   std::list<Payload> TXQueue;
 };
+#endif

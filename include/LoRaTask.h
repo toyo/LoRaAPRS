@@ -1,3 +1,5 @@
+#ifndef LoRaTask_h
+#define LoRaTask_h
 #include <RadioLib.h>
 
 #include <list>
@@ -43,3 +45,4 @@ class LoRaTask {
 
   bool TXDone();
 };
+#endif

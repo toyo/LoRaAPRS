@@ -1,5 +1,5 @@
-#ifndef LoRaTask_h
-#define LoRaTask_h
+#ifndef SX1278Task_h
+#define SX1278Task_h
 
 #include <Arduino.h>
 

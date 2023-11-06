@@ -1,3 +1,6 @@
+#ifndef MyBeaconTask_h
+#define MyBeaconTask_h
+
 #include <Arduino.h>
 
 #include <list>
@@ -20,3 +23,4 @@ class MyBeaconTask {
 
   bool loop();
 };
+#endif

@@ -2,8 +2,7 @@
 
 #include "boards.h"
 
-int SX1278Task::numOfHandle;
-bool* SX1278Task::Handles[8];
+volatile SemaphoreHandle_t SX1278Task::loraSemaphore;
 
 bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t _power, uint8_t _gain,
                        uint8_t _dutyPercent, uint16_t _preambleLength) {
@@ -14,8 +13,6 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
   power = _power;
   preambleLength = _preambleLength;
   gain = _gain;
-
-  Handles[numOfHandle++] = &Handle;
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
   SPI.begin(SCK, MISO, MOSI);
@@ -163,13 +160,9 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
 
   Serial.println(F("Setting done."));
 
-  sx->setDio0Action(
-      []() {
-        for (int i = 0; i < numOfHandle; i++) {
-          *Handles[i] = true;
-        }
-      },
-      RISING);
+  loraSemaphore = xSemaphoreCreateBinary();
+
+  sx->setDio0Action([]() { xSemaphoreGiveFromISR(loraSemaphore, NULL); }, RISING);
 
   if (enableRX) {
     state = sx->startReceive();
@@ -195,7 +188,7 @@ bool SX1278Task::loop() {
     return resp;
   }
 
-  if (Handle) {
+  if (xSemaphoreTake(loraSemaphore, 0) == pdTRUE) {
     int irqflags = sx->getIRQFlags();
 
     if (irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE) {
@@ -254,7 +247,6 @@ bool SX1278Task::loop() {
         return false;
       }
     }
-    Handle = false;
   }
 
   return true;

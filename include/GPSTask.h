@@ -17,7 +17,7 @@ class GPSTask : public TinyGPSPlus, public LatLng {
   virtual bool setup();
   virtual bool loop();
 
-  virtual bool isValid();
+  virtual bool isValid() const;
   virtual int32_t getLat1e7();
   virtual int32_t getLng1e7();
 };

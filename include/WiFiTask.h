@@ -13,7 +13,6 @@ class WiFiTask {
 #ifdef ENABLE_WIFI
   WiFiClient client;
   wl_status_t laststatus = WL_NO_SHIELD;
-#endif  // ENABLE_WIFI
 
   char callsign[16];
   char passcode[8];
@@ -26,6 +25,7 @@ class WiFiTask {
 
   uint8_t recvline[256];
   uint8_t *endptr = recvline;
+#endif  // ENABLE_WIFI
 
  public:
   WiFiTask(){};

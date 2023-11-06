@@ -1,48 +1,22 @@
-#include <OneButton.h>
+#include <Arduino.h>
 
+#include <list>
+
+#include "APRS.h"
 #include "boards.h"
 
+extern volatile SemaphoreHandle_t beaconSemaphore;
+
 class MyBeaconTask {
-  OneButton button;
-  bool buttonPushed;
-
-  int BeaconPeriodSec;
-  unsigned long LastSent = 0;  // millis()
-
   APRS &aprs;
   String CallSign;
 
  public:
   std::list<AX25UI> RXQueue;
 
-  MyBeaconTask(APRS &_aprs, uint16_t timeoutSec = 120)
-      : aprs(_aprs), button(BUTTON1), buttonPushed(true), BeaconPeriodSec(timeoutSec) {
-    button.attachClick([](void *p) { ((MyBeaconTask *)p)->buttonPushed = true; }, this);
-  }
+  MyBeaconTask(APRS &_aprs) : aprs(_aprs) {}
 
-  bool setup(String _callsign, uint16_t timeoutSec = 120) {
-    BeaconPeriodSec = timeoutSec;
-    CallSign = _callsign;
-    return true;
-  }
+  bool setup(String _callsign, uint timeoutSec);
 
-  bool loop() {
-    button.tick();
-
-    unsigned long ct = millis();
-    bool willSend = (ct - LastSent) > (BeaconPeriodSec * 1000);  // timeout?
-
-    if (buttonPushed) {
-      willSend = true;
-    }
-
-    if (willSend && aprs.getLatLng().isValid()) {
-      LastSent = ct;
-      buttonPushed = false;
-
-      AX25UI ui(aprs.Encode(), CallSign, aprs.getToCall());
-      RXQueue.push_front(ui);
-    }
-    return true;
-  }
+  bool loop();
 };

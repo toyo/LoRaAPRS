@@ -2,6 +2,7 @@
 
 bool WiFiTask::setup(LatLng *l, uint distKm, const char *callsign, const char *passcode, const char *host,
                      const int httpPort, bool enableRX, bool enableTX) {
+#ifdef ENABLE_WIFI
   strncpy(this->callsign, callsign, sizeof(this->callsign));
   if (passcode != nullptr) {
     strncpy(this->passcode, passcode, sizeof(this->passcode));
@@ -19,6 +20,7 @@ bool WiFiTask::setup(LatLng *l, uint distKm, const char *callsign, const char *p
   this->httpPort = httpPort;
   this->enableRX = enableRX;
   this->enableTX = enableTX;
+#endif
 
 #ifdef ESP32
   uint8_t mac_wifi[6];

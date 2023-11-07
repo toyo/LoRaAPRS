@@ -8,11 +8,12 @@
 #include "APRS.h"
 #include "boards.h"
 
-extern volatile SemaphoreHandle_t beaconSemaphore;
-
 class MyBeaconTask {
   APRS &aprs;
   String CallSign;
+
+  static volatile SemaphoreHandle_t beaconSemaphore;
+  static void onBeacon();
 
  public:
   std::list<AX25UI> RXQueue;

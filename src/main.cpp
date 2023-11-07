@@ -22,7 +22,16 @@ Config c;
 AXP192Task AXP192;
 #endif
 WiFiTask Wifi;
-SX1278Task LoRa;
+
+#if defined(ARDUINO_TTGO_LoRa32_v21new)
+SX1278Task LoRa(LORA_CS, LORA_IRQ, RADIOLIB_NC, RADIOLIB_NC);
+#elif defined(ARDUINO_T_Beam)
+SX1278Task LoRa(LORA_CS, LORA_IRQ, LORA_RST, LORA_IO1);
+#elif defined(ARDUINO_NRF52840_PCA10056)
+SX1278Task LoRa(RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC);
+#else
+#error Unknown board.
+#endif
 GPSTask GPS;
 
 AX25UITask WiFiAX25(Wifi.RXQueue, Wifi.TXQueue);
@@ -53,7 +62,8 @@ void setup() {
 #endif
   OLED.setup();
 
-  LoRa.setup(c.channel.frequency * (c.lora.offsetppm * 1e-6 + 1), c.channel.bandwidth, c.channel.spreading_factor,
+  SPI.begin(SCK, MISO, MOSI);
+  LoRa.setup(SPI, c.channel.frequency * (c.lora.offsetppm * 1e-6 + 1), c.channel.bandwidth, c.channel.spreading_factor,
              c.lora.coding_rate4, c.lora.power, c.lora.gain_rx, 30, 8);
   LoRaAX25.setup();
   LoRaAX25.addUITRACE(c.digi.uitrace);
@@ -72,18 +82,18 @@ void setup() {
   WiFiAX25.setCallSign(c.callsign, false);
 
   MyBeacon.setup(c.callsign, c.beacon.timeoutSec);
-
-  return;
 }
 
 void loop() {
-#if defined(XPOWERS_CHIP_AXP192)
-  AXP192.loop();
-#endif
-  OLED.loop();
-  GPS.loop();
+  bool isDo = false;
 
-  MyBeacon.loop();
+#if defined(XPOWERS_CHIP_AXP192)
+  isDo = AXP192.loop() || isDo;
+#endif
+
+  isDo = OLED.loop() || isDo;
+  isDo = GPS.loop() || isDo;
+  isDo = MyBeacon.loop() || isDo;
 
   while (!MyBeacon.RXQueue.empty()) {
     AX25UI ui = MyBeacon.RXQueue.front();
@@ -93,10 +103,11 @@ void loop() {
     }
     LoRaAX25.TXQueue.push_front(ui);
     MyBeacon.RXQueue.pop_front();
+    isDo = true;
   }
 
-  Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str());
-  WiFiAX25.loop();
+  isDo = Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str()) || isDo;
+  isDo = WiFiAX25.loop() || isDo;
 
   while (!WiFiAX25.RXQueue.empty()) {
     static std::map<String, uint32_t> distList;
@@ -133,10 +144,11 @@ void loop() {
   done:
     OLED.ShowUI(ui);
     WiFiAX25.RXQueue.pop_front();
+    isDo = true;
   }
 
-  LoRa.loop();
-  LoRaAX25.loop();
+  isDo = LoRa.loop() || isDo;
+  isDo = LoRaAX25.loop() || isDo;
 
   while (!LoRaAX25.RXQueue.empty()) {
     AX25UI ui = LoRaAX25.RXQueue.front();
@@ -147,5 +159,11 @@ void loop() {
     }
     OLED.ShowUI(ui);
     LoRaAX25.RXQueue.pop_front();
+    isDo = true;
+  }
+
+  if (!isDo) {
+    // Serial.println("Sleep 1sec.");
+    delay(1000);
   }
 }

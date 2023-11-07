@@ -1,23 +1,20 @@
 #include "MyBeaconTask.h"
 
-volatile SemaphoreHandle_t beaconSemaphore;
-
-void IRAM_ATTR onBeacon() {
-  //
-  xSemaphoreGiveFromISR(beaconSemaphore, NULL);
-}
+volatile SemaphoreHandle_t MyBeaconTask::beaconSemaphore;
 
 hw_timer_t* timer = NULL;
+
+void IRAM_ATTR MyBeaconTask::onBeacon() { xSemaphoreGiveFromISR(MyBeaconTask::beaconSemaphore, NULL); }
 
 bool MyBeaconTask::setup(String _callsign, uint timeoutSec) {
   beaconSemaphore = xSemaphoreCreateBinary();
   timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onBeacon, true);
+  timerAttachInterrupt(timer, onBeacon, true);
   timerAlarmWrite(timer, timeoutSec * 1000000, true);
   timerAlarmEnable(timer);
 
 #if BUTTON1 != -1
-  attachInterrupt(BUTTON1, &onBeacon, RISING);
+  attachInterrupt(BUTTON1, onBeacon, RISING);
 #endif
 
   CallSign = _callsign;

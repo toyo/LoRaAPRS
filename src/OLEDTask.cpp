@@ -8,9 +8,12 @@ U8G2_SSD1306_128X64_VCOMH0_F_HW_I2C u8g2(U8G2_R0);
 #endif
 
 bool OLEDTask::ShowUI(AX25UI &_ui) {
+#ifdef ENABLE_U8G2
   ui = _ui;
   updated_ui = true;
-
+#else
+  updated_ui = false;
+#endif
   return true;
 }
 
@@ -89,7 +92,10 @@ bool OLEDTask::loop() {
 #ifdef ENABLE_U8G2
     u8g2.sendBuffer();
 #endif
+
+    updated_ui = false;
+    return true;
+  } else {
+    return false;
   }
-  updated_ui = false;
-  return true;
 }

@@ -10,8 +10,10 @@ bool LoRaTask::setup(PhysicalLayer* pl) {
 }
 
 bool LoRaTask::TXloop() {
+  bool isDo = false;
   if (!enableTX) {
     while (!AX25UI_TXQueue.empty()) AX25UI_TXQueue.pop_front();
+    return false;
   } else {
     if (TXEnd - TXStart >= 0 /* transmit completed */ && RXCarrierDetected == 0) {
       unsigned long now = millis();
@@ -46,8 +48,8 @@ bool LoRaTask::TXloop() {
         }
       }
     }
+    return true;
   }
-  return true;
 }
 
 bool LoRaTask::TXDone() {

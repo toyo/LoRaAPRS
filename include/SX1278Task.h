@@ -16,7 +16,12 @@ class SX1278Task : public LoRaTask {
   uint16_t preambleLength;
   uint8_t gain;
 
-  static volatile SemaphoreHandle_t loraSemaphore;
+  volatile SemaphoreHandle_t loraSemaphore;
+
+  const uint32_t cs;
+  const uint32_t irq;
+  const uint32_t rst;
+  const uint32_t gpio;
 
  protected:
   virtual bool carrierDetected() const { return (sx->getModemStatus() & 0x01) != 0x00; };
@@ -25,12 +30,11 @@ class SX1278Task : public LoRaTask {
   virtual bool startReceive() const;
 
  public:
-  SX1278Task(bool enableRX = true, bool enableTX = true, uint8_t _syncWord = RADIOLIB_SX127X_SYNC_WORD)
-      : LoRaTask(enableRX, enableTX, 1000),  // TXDelay milli sec.
-        syncWord(_syncWord){};
+  SX1278Task(uint32_t cs, uint32_t irq, uint32_t rst, uint32_t gpio, bool enableRX = true, bool enableTX = true,
+             uint8_t _syncWord = RADIOLIB_SX127X_SYNC_WORD);
 
-  bool setup(float freq, float bw = 20.8, uint8_t sf = 11, uint8_t cr = 6, int8_t power = 2, uint8_t gain = 0,
-             uint8_t _dutyPercent = 50, uint16_t preambleLength = 8);
+  bool setup(SPIClass& spi, float freq, float bw = 20.8, uint8_t sf = 11, uint8_t cr = 6, int8_t power = 2,
+             uint8_t gain = 0, uint8_t _dutyPercent = 50, uint16_t preambleLength = 8);
 
   int16_t setCodingRate(uint8_t cr) { return sx->setCodingRate(cr); }
   int16_t setOutputPower(int8_t power, bool useRfo = false) { return sx->setOutputPower(power, useRfo); }

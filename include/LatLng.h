@@ -11,7 +11,7 @@ class LatLng {
   LatLng() {}
 
   virtual bool setup() { return true; }
-  virtual bool loop() { return true; }
+  virtual bool loop() { return false; }
 
   virtual bool isValid() const { return true; }
 

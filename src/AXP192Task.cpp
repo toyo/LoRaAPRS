@@ -4,8 +4,8 @@
 
 #include <XPowersLib.h>
 
-bool PMUIrq = false;
-void ARDUINO_ISR_ATTR PMUIRQIntr() { PMUIrq = true; }
+// volatile SemaphoreHandle_t AXP192Task::pmuSemaphore;
+
 XPowersPMU axp;
 
 bool AXP192Task::setup() {
@@ -17,7 +17,10 @@ bool AXP192Task::setup() {
   }
 
   pinMode(PMU_IRQ, INPUT_PULLUP);
-  attachInterrupt(PMU_IRQ, PMUIRQIntr, FALLING);
+  pmuSemaphore = xSemaphoreCreateBinary();
+  attachInterruptArg(
+      PMU_IRQ, [](void* sem) IRAM_ATTR { xSemaphoreGiveFromISR(static_cast<SemaphoreHandle_t>(sem), NULL); },
+      pmuSemaphore, FALLING);
 
   axp.setVbusVoltageLimit(XPOWERS_AXP192_VBUS_VOL_LIM_4V);
   axp.setVbusCurrentLimit(XPOWERS_AXP192_VBUS_CUR_LIM_OFF);
@@ -44,11 +47,9 @@ bool AXP192Task::setup() {
 }
 
 bool AXP192Task::loop() {
-  if (PMUIrq) {
+  if (xSemaphoreTake(pmuSemaphore, 0) == pdTRUE) {
     // Get AXP192 Interrupt Status Register
     axp.getIrqStatus();
-
-    PMUIrq = false;
 
     if (axp.isPekeyLongPressIrq()) {
       Serial.println("PowerOff.");
@@ -57,8 +58,10 @@ bool AXP192Task::loop() {
       // never reach here.
     }
     axp.clearIrqStatus();
+    return true;
+  } else {
+    return false;
   }
-  return true;
 }
 
 #endif

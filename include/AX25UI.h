@@ -21,8 +21,9 @@ class AX25UI {
 
   bool isNull() const { return FromCall == ""; }
   bool isIGATEable() const {
-    return ToDigiCalls[1] != "TCPIP" && ToDigiCalls[1] != "TCPXX" && ToDigiCalls[1] != "NOGATE" &&
-           ToDigiCalls[1] != "RFONLY" && message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
+    return ToDigiCalls.size() > 1 && ToDigiCalls[1] != "TCPIP" && ToDigiCalls[1] != "TCPXX" &&
+           ToDigiCalls[1] != "NOGATE" && ToDigiCalls[1] != "RFONLY" &&
+           message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
   }
 
   String getToDigiCalls(int i) const { return ToDigiCalls[i]; };

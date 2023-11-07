@@ -9,11 +9,14 @@ bool GPSTask::setup() {
 }
 
 bool GPSTask::loop() {
+  bool isDo = false;
   LatLng::loop();
   while (Serial1.available() > 0) {
     encode(Serial1.read());
+    isDo = true;
   }
-  return true;
+
+  return isDo;
 }
 
 bool GPSTask::isValid() const { return location.isValid(); }

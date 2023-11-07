@@ -14,6 +14,7 @@ void AX25UITask::addUITRACE(String _UITRACE) {
 }
 
 bool AX25UITask::loop() {
+  bool isDo = false;
   while (!PayloadRXQueue.empty()) {
     Payload recvd = PayloadRXQueue.front();
     AX25UI ui(recvd.getData(), recvd.getLen());
@@ -50,6 +51,7 @@ bool AX25UITask::loop() {
       }
     }
     PayloadRXQueue.pop_front();
+    isDo = true;
   }
 
   while (!TXQueue.empty() && PayloadTXQueue.empty()) {
@@ -59,8 +61,9 @@ bool AX25UITask::loop() {
       PayloadTXQueue.push_back(ui.Encode());
     }
     TXQueue.pop_front();
+    isDo = true;
   }
-  return true;
+  return isDo;
 }
 
 size_t AX25UITask::TXQueueSize() { return TXQueue.size() + PayloadTXQueue.size(); }

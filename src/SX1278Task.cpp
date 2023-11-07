@@ -2,9 +2,18 @@
 
 #include "boards.h"
 
-volatile SemaphoreHandle_t SX1278Task::loraSemaphore;
+// volatile SemaphoreHandle_t SX1278Task::loraSemaphore;
 
-bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t _power, uint8_t _gain,
+SX1278Task::SX1278Task(uint32_t _cs, uint32_t _irq, uint32_t _rst, uint32_t _gpio, bool enableRX, bool enableTX,
+                       uint8_t _syncWord)
+    : cs(_cs),
+      irq(_irq),
+      rst(_rst),
+      gpio(_gpio),
+      LoRaTask(enableRX, enableTX, 1000),  // TXDelay milli sec.
+      syncWord(_syncWord) {}
+
+bool SX1278Task::setup(SPIClass& spi, float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t _power, uint8_t _gain,
                        uint8_t _dutyPercent, uint16_t _preambleLength) {
   freq = _freq;
   bw = _bw;
@@ -14,20 +23,12 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
   preambleLength = _preambleLength;
   gain = _gain;
 
-#if defined(ARDUINO_TTGO_LoRa32_v21new)
-  SPI.begin(SCK, MISO, MOSI);
-  static Module module(LORA_CS, LORA_IRQ, RADIOLIB_NC, RADIOLIB_NC, SPI);
-#elif defined(ARDUINO_T_Beam)
-  SPI.begin(SCK, MISO, MOSI);
-  static Module module(LORA_CS, LORA_IRQ, LORA_RST, LORA_IO1, SPI);
-#elif defined(ARDUINO_NRF52840_PCA10056)
-  SPI.begin(SCK, MISO, MOSI);
-  static Module module(RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, SPI);
-#else
-#error Unknown board.
-#endif
+  Module* mod;
 
-  sx = new SX1278(&module);
+  mod = new Module(cs, irq, rst, gpio, spi);
+
+  // sx = new SX1278(&module);
+  sx = new SX1278(mod);
   super::setup(sx);
 
   Serial.print(F("Init Freq: "));
@@ -162,7 +163,9 @@ bool SX1278Task::setup(float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t 
 
   loraSemaphore = xSemaphoreCreateBinary();
 
-  sx->setDio0Action([]() { xSemaphoreGiveFromISR(loraSemaphore, NULL); }, RISING);
+  attachInterruptArg(
+      irq, [](void* sem) IRAM_ATTR { xSemaphoreGiveFromISR(static_cast<SemaphoreHandle_t>(sem), NULL); }, loraSemaphore,
+      RISING);
 
   if (enableRX) {
     state = sx->startReceive();
@@ -247,9 +250,10 @@ bool SX1278Task::loop() {
         return false;
       }
     }
+    return true;
   }
 
-  return true;
+  return false;
 }
 
 bool SX1278Task::startReceive() const {

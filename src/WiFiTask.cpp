@@ -37,6 +37,7 @@ bool WiFiTask::setup(LatLng *l, uint distKm, const char *callsign, const char *p
 }
 
 bool WiFiTask::loop(const char *SSID, const char *password) {
+  bool isDo = false;
 #ifdef ENABLE_WIFI
   if (!client.connected()) {
     wl_status_t status = WiFi.status();
@@ -83,7 +84,7 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
         // return false;
       }
     }
-
+    isDo = true;
   } else
 #endif  // ENABLE_WIFI
   {
@@ -109,6 +110,7 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
         }
       }
       endptr++;
+      isDo = true;
     }
 #endif  // ENABLE_WIFI
     while (!TXQueue.empty()) {
@@ -121,8 +123,9 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
       }
 #endif  // ENABLE_WIFI
       TXQueue.pop_front();
+      isDo = true;
     }
   }
 
-  return true;
+  return isDo;
 }

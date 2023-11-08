@@ -185,12 +185,7 @@ bool SX1278Task::setup(SPIClass& spi, float _freq, float _bw, uint8_t _sf, uint8
   return true;
 }
 
-bool SX1278Task::loop() {
-  bool resp = super::TXloop();
-  if (!resp) {
-    return resp;
-  }
-
+bool SX1278Task::taskRX() {
   if (xSemaphoreTake(loraSemaphore, 0) == pdTRUE) {
     int irqflags = sx->getIRQFlags();
 
@@ -238,8 +233,8 @@ bool SX1278Task::loop() {
         }
       }
 
-      if (!startReceive()) {  // RXCONTINUOUS not work properly.
-        return false;
+      while (!startReceive()) {  // RXCONTINUOUS not work properly.
+        Serial.println("Cannot start receive continuously.");
       }
 
       RXCarrierDetected = 0;
@@ -252,8 +247,24 @@ bool SX1278Task::loop() {
     }
     return true;
   }
-
   return false;
+}
+
+bool SX1278Task::taskTX() {
+  bool resp = super::TXloop();
+  if (!resp) {
+    vTaskDelay(500 / portTICK_RATE_MS);
+  }
+  return resp;
+}
+
+bool SX1278Task::loop() {
+  bool isDo = false;
+
+  isDo = taskTX() || isDo;
+  isDo = taskRX() || isDo;
+
+  return isDo;
 }
 
 bool SX1278Task::startReceive() const {

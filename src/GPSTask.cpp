@@ -11,7 +11,7 @@ bool GPSTask::setup() {
 bool GPSTask::loop() {
   bool isDo = false;
   LatLng::loop();
-  while (Serial1.available() > 0) {
+  for (int i = Serial1.available(); i > 0; i--) {
     encode(Serial1.read());
     isDo = true;
   }

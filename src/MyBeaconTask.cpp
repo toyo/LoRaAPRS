@@ -21,8 +21,10 @@ bool MyBeaconTask::setup(String _callsign, uint timeoutSec) {
   return true;
 }
 
-bool MyBeaconTask::loop() {
-  if (xSemaphoreTake(beaconSemaphore, 0) == pdTRUE) {
+bool MyBeaconTask::loop() { return task(0); }
+
+bool MyBeaconTask::task(portTickType xBlockTime) {
+  if (xSemaphoreTake(beaconSemaphore, xBlockTime) == pdTRUE) {
     Serial.println("Send Beacon");
     if (aprs.getLatLng().isValid()) {
       AX25UI ui(aprs.Encode(), CallSign, aprs.getToCall());

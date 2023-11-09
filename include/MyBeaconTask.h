@@ -23,5 +23,6 @@ class MyBeaconTask {
   bool setup(String _callsign, uint timeoutSec);
 
   bool loop();
+  bool task(portTickType xBlockTime);
 };
 #endif

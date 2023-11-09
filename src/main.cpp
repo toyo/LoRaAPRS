@@ -89,7 +89,7 @@ void setup() {
         xTaskCreateUniversal(
             [](void*) {
               while (1) {
-                LoRa.taskRX();
+                LoRa.taskRX(portMAX_DELAY);
               }
             },
             "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
@@ -143,7 +143,7 @@ void setup() {
       [](void*) {
         MyBeacon.setup(c.callsign, c.beacon.timeoutSec);
         while (1) {
-          if (!MyBeacon.loop()) delay(100);
+          MyBeacon.task(portMAX_DELAY);
         }
       },
       "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);

@@ -185,8 +185,8 @@ bool SX1278Task::setup(SPIClass& spi, float _freq, float _bw, uint8_t _sf, uint8
   return true;
 }
 
-bool SX1278Task::taskRX() {
-  if (xSemaphoreTake(loraSemaphore, 0) == pdTRUE) {
+bool SX1278Task::taskRX(portTickType xBlockTime) {
+  if (xSemaphoreTake(loraSemaphore, xBlockTime) == pdTRUE) {
     int irqflags = sx->getIRQFlags();
 
     if (irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE) {
@@ -262,7 +262,7 @@ bool SX1278Task::loop() {
   bool isDo = false;
 
   isDo = taskTX() || isDo;
-  isDo = taskRX() || isDo;
+  isDo = taskRX(0) || isDo;
 
   return isDo;
 }

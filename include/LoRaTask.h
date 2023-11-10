@@ -17,6 +17,7 @@ class LoRaTask {
   bool enableRX;
   bool enableTX;
   uint dutyPercent;
+  bool nowTX;
 
   unsigned long RXEnd = 0, RXCarrierDetected = 0;
 
@@ -41,7 +42,7 @@ class LoRaTask {
 
   bool setup(PhysicalLayer* pl);
 
-  bool TXloop();
+  bool taskTX();
 
   bool TXDone();
 };

@@ -44,6 +44,5 @@ class SX1278Task : public LoRaTask {
 
   bool loop();
   bool taskRX(portTickType xBlockTime);
-  bool taskTX();
 };
 #endif

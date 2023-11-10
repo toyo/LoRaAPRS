@@ -250,14 +250,6 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
   return false;
 }
 
-bool SX1278Task::taskTX() {
-  bool resp = super::TXloop();
-  if (!resp) {
-    vTaskDelay(500 / portTICK_RATE_MS);
-  }
-  return resp;
-}
-
 bool SX1278Task::loop() {
   bool isDo = false;
 

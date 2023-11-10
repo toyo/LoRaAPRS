@@ -9,13 +9,13 @@ bool LoRaTask::setup(PhysicalLayer* pl) {
   return true;
 }
 
-bool LoRaTask::TXloop() {
+bool LoRaTask::taskTX() {
   bool isDo = false;
+
   if (!enableTX) {
     while (!AX25UI_TXQueue.empty()) AX25UI_TXQueue.pop_front();
-    return false;
   } else {
-    if (TXEnd - TXStart >= 0 /* transmit completed */ && RXCarrierDetected == 0) {
+    if (!nowTX && RXCarrierDetected == 0 && TXEnd - TXStart >= 0 /* transmit completed */) {
       unsigned long now = millis();
       if (now - RXEnd > TXDelay) {
         if (now - TXEnd > (100 / dutyPercent - 1) * (TXEnd - TXStart)) {
@@ -40,6 +40,7 @@ bool LoRaTask::TXloop() {
                 len++;
               }
 
+              nowTX = true;
               transmissionState = phyLayer->startTransmit(data, len);
               TXStart = millis();
               AX25UI_TXQueue.pop_front();
@@ -48,12 +49,14 @@ bool LoRaTask::TXloop() {
         }
       }
     }
-    return true;
+    isDo = true;
   }
+  return isDo;
 }
 
 bool LoRaTask::TXDone() {
   TXEnd = millis();
+  nowTX = false;
 
   if (transmissionState != RADIOLIB_ERR_NONE) {
     Serial.print(F("LoRa TX failed, code "));

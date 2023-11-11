@@ -4,13 +4,13 @@
 
 // volatile SemaphoreHandle_t SX1278Task::loraSemaphore;
 
-SX1278Task::SX1278Task(uint32_t _cs, uint32_t _irq, uint32_t _rst, uint32_t _gpio, bool enableRX, bool enableTX,
-                       uint8_t _syncWord)
+SX1278Task::SX1278Task(QueueHandle_t& _RXQ, uint32_t _cs, uint32_t _irq, uint32_t _rst, uint32_t _gpio, bool enableRX,
+                       bool enableTX, uint8_t _syncWord)
     : cs(_cs),
       irq(_irq),
       rst(_rst),
       gpio(_gpio),
-      LoRaTask(enableRX, enableTX, 1000),  // TXDelay milli sec.
+      LoRaTask(_RXQ, enableRX, enableTX, 1000),  // TXDelay milli sec.
       syncWord(_syncWord) {}
 
 bool SX1278Task::setup(SPIClass& spi, float _freq, float _bw, uint8_t _sf, uint8_t _cr, int8_t _power, uint8_t _gain,
@@ -211,24 +211,27 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
 
         //
 
-        LoRaRXPayload pkt(pl, sx->getRSSI(), sx->getSNR(), sx->getFrequencyError(false));
+        LoRaRXPayload* pkt = new LoRaRXPayload(pl, sx->getRSSI(), sx->getSNR(), sx->getFrequencyError(false));
 
         switch (state) {
           case RADIOLIB_ERR_NONE:
-            pkt.setCRCErr((irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_PAYLOAD_CRC_ERROR) != 0);
+            pkt->setCRCErr((irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_PAYLOAD_CRC_ERROR) != 0);
             break;
           case RADIOLIB_ERR_LORA_HEADER_DAMAGED:
           case RADIOLIB_ERR_CRC_MISMATCH:
-            pkt.setCRCErr(true);
+            pkt->setCRCErr(true);
             break;
         }
 
-        Serial.print("LORA->:" + pkt.toString());
-        Serial.print(String(", ") + pkt.getRSSI() + "dBm, " + pkt.getSNR() + "dB, " + pkt.getFrequencyError() + "Hz");
-        if (pkt.getCRCErr()) {
+        Serial.print("LORA->:" + pkt->toString());
+        Serial.print(String(", ") + pkt->getRSSI() + "dBm, " + pkt->getSNR() + "dB, " + pkt->getFrequencyError() +
+                     "Hz");
+        if (pkt->getCRCErr()) {
           Serial.println(F("[CRCErr]"));
         } else {
-          AX25UI_RXQueue.push_back(pkt);
+          if (xQueueSend(AX25UI_RXQ, pkt, 0) != pdPASS) {
+            Serial.println("Cannot enqueue on LoRa.");
+          }
           Serial.println();
         }
       }

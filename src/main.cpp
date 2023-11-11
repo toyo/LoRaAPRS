@@ -21,21 +21,28 @@ Config c;
 #include "AXP192Task.h"
 AXP192Task AXP192;
 #endif
-WiFiTask Wifi;
+
+static QueueHandle_t LoRaToAX25Q;
+static QueueHandle_t WiFiToAX25Q;
+
+WiFiTask Wifi(WiFiToAX25Q);
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
-SX1278Task LoRa(LORA_CS, LORA_IRQ, RADIOLIB_NC, RADIOLIB_NC);
+SX1278Task LoRa(LoRaToAX25Q, LORA_CS, LORA_IRQ, RADIOLIB_NC, RADIOLIB_NC);
 #elif defined(ARDUINO_T_Beam)
-SX1278Task LoRa(LORA_CS, LORA_IRQ, LORA_RST, LORA_IO1);
+SX1278Task LoRa(LoRaToAX25Q, LORA_CS, LORA_IRQ, LORA_RST, LORA_IO1);
 #elif defined(ARDUINO_NRF52840_PCA10056)
-SX1278Task LoRa(RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC);
+SX1278Task LoRa(LoRaToAX25Q, RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC);
 #else
 #error Unknown board.
 #endif
 GPSTask GPS;
 
-AX25UITask WiFiAX25(Wifi.RXQueue, Wifi.TXQueue);
-AX25UITask LoRaAX25(LoRa.AX25UI_RXQueue, LoRa.AX25UI_TXQueue);
+static QueueHandle_t LoRaAX25toUserQ;
+static QueueHandle_t WiFiAX25toUserQ;
+
+AX25UITask WiFiAX25(WiFiToAX25Q, Wifi.TXQueue, WiFiAX25toUserQ);
+AX25UITask LoRaAX25(LoRaToAX25Q, LoRa.AX25UI_TXQueue, LoRaAX25toUserQ);
 
 APRS aprsHere(GPS);
 MyBeaconTask MyBeacon(aprsHere);
@@ -68,7 +75,7 @@ void setup() {
           if (!GPS.loop()) delay(100);
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "GPSTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   aprsHere.set(c.beacon.latitude, c.beacon.longitude, c.beacon.ambiguity, c.beacon.message);
 
@@ -79,10 +86,14 @@ void setup() {
           if (!OLED.loop()) delay(100);
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "OLEDTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
+  LoRaAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
 
   xTaskCreateUniversal(
       [](void *) {
+        LoRaToAX25Q = xQueueCreate(4, sizeof(LoRaRXPayload));
+
         SPI.begin(SCK, MISO, MOSI);
         LoRa.setup(SPI, c.channel.frequency * (c.lora.offsetppm * 1e-6 + 1), c.channel.bandwidth,
                    c.channel.spreading_factor, c.lora.coding_rate4, c.lora.power, c.lora.gain_rx, 30, 8);
@@ -92,7 +103,7 @@ void setup() {
                 LoRa.taskRX(portMAX_DELAY);
               }
             },
-            "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+            "LoraRXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
         xTaskCreateUniversal(
             [](void *) {
               while (1) {
@@ -101,45 +112,51 @@ void setup() {
                 }
               }
             },
-            "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+            "LoRaTXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
+        xTaskCreateUniversal(
+
+            [](void *) {
+              LoRaAX25.setup();
+              LoRaAX25.addUITRACE(c.digi.uitrace);
+              LoRaAX25.setCallSign(c.callsign, true);
+              while (1) {
+                if (!LoRaAX25.loop()) delay(100);
+              }
+            },
+            "LoRaAX25Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
         vTaskDelete(NULL);
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "LoRaTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
+  WiFiAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
 
   xTaskCreateUniversal(
       [](void *) {
+        WiFiToAX25Q = xQueueCreate(4, sizeof(LoRaRXPayload));
+
         if (c.beacon.timeoutSec != 0) {
           Wifi.setup(nullptr, 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
         } else {
           Wifi.setup(&aprsHere.getLatLng(), 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
         }
+
+        xTaskCreateUniversal(
+            [](void *) {
+              WiFiAX25.setup();
+              WiFiAX25.setCallSign(c.callsign, false);
+              while (1) {
+                if (!WiFiAX25.loop()) delay(100);
+              }
+            },
+            "WiFiAX25Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
         while (1) {
           if (!Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str())) delay(100);
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
-
-  xTaskCreateUniversal(
-      [](void *) {
-        LoRaAX25.setup();
-        LoRaAX25.addUITRACE(c.digi.uitrace);
-        LoRaAX25.setCallSign(c.callsign, true);
-        while (1) {
-          if (!LoRaAX25.loop()) delay(100);
-        }
-      },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
-
-  xTaskCreateUniversal(
-      [](void *) {
-        WiFiAX25.setup();
-        WiFiAX25.setCallSign(c.callsign, false);
-        while (1) {
-          if (!WiFiAX25.loop()) delay(100);
-        }
-      },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "WiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   MyBeacon.setup(c.callsign, c.beacon.timeoutSec);
 
@@ -149,7 +166,7 @@ void setup() {
           MyBeacon.task(portMAX_DELAY);
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "MyBeaconTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   //
   // init done.
@@ -158,35 +175,35 @@ void setup() {
   xTaskCreateUniversal(
       [](void *) {
         while (1) {
-          if (!MyBeacon.RXQueue.empty()) {
-            AX25UI ui = MyBeacon.RXQueue.front();
+          if (!MyBeacon.TXQueue.empty()) {
+            AX25UI ui = MyBeacon.TXQueue.front();
             WiFiAX25.TXQueue.push_front(ui);
             if (c.beacon.digipath != "") {
               ui.AppendDigiCall(c.beacon.digipath);
             }
             LoRaAX25.TXQueue.push_front(ui);
-            MyBeacon.RXQueue.pop_front();
+            MyBeacon.TXQueue.pop_front();
           } else {
             vTaskDelay(500 / portTICK_RATE_MS);
           }
         }
       },
-      "Task", 65536, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "BeaconGenerateTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   xTaskCreateUniversal(
       [](void *) {
         while (1) {
-          if (!WiFiAX25.RXQueue.empty()) {
+          AX25UI *ui = new AX25UI((const unsigned char *)"", 0);
+          if (xQueueReceive(WiFiAX25toUserQ, ui, portMAX_DELAY) == pdTRUE) {
             static std::map<String, uint32_t> distList;
             static uint32_t distanceCentiMeter = 3000000;
 
-            AX25UI ui = WiFiAX25.RXQueue.front();
-            APRS aprsThere(ui);
+            APRS aprsThere(*ui);
             if (aprsThere.HasLocation()) {
-              distList[ui.getFromCall()] = aprsHere.distancecmFrom(aprsThere);
+              distList[ui->getFromCall()] = aprsHere.distancecmFrom(aprsThere);
             }
-            if (distList.find(ui.getFromCall()) != distList.end()) {
-              if (distList[ui.getFromCall()] < distanceCentiMeter) {
+            if (distList.find(ui->getFromCall()) != distList.end()) {
+              if (distList[ui->getFromCall()] < distanceCentiMeter) {
                 size_t txQueueSize = LoRaAX25.TXQueueSize();
                 if (txQueueSize >= 1) {
                   distanceCentiMeter /= pow(1.05, txQueueSize);
@@ -196,10 +213,10 @@ void setup() {
                     goto done;
                   }
                 }
-                ui.EraseDigiCalls();
-                ui.AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
-                ui.AppendDigiCall(c.callsign + "*");
-                LoRaAX25.TXQueue.push_back(ui);
+                ui->EraseDigiCalls();
+                ui->AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
+                ui->AppendDigiCall(c.callsign + "*");
+                LoRaAX25.TXQueue.push_back(*ui);
               } else {
                 if (LoRaAX25.TXQueueSize() == 0) {
                   distanceCentiMeter *= 1.05;
@@ -209,33 +226,27 @@ void setup() {
             }
 
           done:
-            OLED.ShowUI(ui);
-            WiFiAX25.RXQueue.pop_front();
-          } else {
-            vTaskDelay(500 / portTICK_RATE_MS);
+            OLED.ShowUI(*ui);
           }
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "WiFiToLoRaTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   xTaskCreateUniversal(
       [](void *) {
         while (1) {
-          if (!LoRaAX25.RXQueue.empty()) {
-            AX25UI ui = LoRaAX25.RXQueue.front();
+          AX25UI ui;
+          if (xQueueReceive(LoRaAX25toUserQ, &ui, portMAX_DELAY) == pdTRUE) {
             if (ui.isIGATEable()) {
               ui.AppendDigiCall(c.callsign);
               ui.AppendDigiCall("I");  // http://www.aprs-is.net/q.aspx , to set qAR.
               WiFiAX25.TXQueue.push_back(ui);
             }
             OLED.ShowUI(ui);
-            LoRaAX25.RXQueue.pop_front();
-          } else {
-            vTaskDelay(500 / portTICK_RATE_MS);
           }
         }
       },
-      "Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "LoRaToWiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 }
 
 void loop() {

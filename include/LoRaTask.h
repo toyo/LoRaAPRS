@@ -32,13 +32,15 @@ class LoRaTask {
   uint8_t sf;
   uint8_t cr;
 
+  QueueHandle_t &AX25UI_RXQ;
+
  public:
   LoRaTask() = delete;
-  LoRaTask(bool enableRX = true, bool enableTX = true, const uint txDelay = 1000, const bool addCR = false)
-      : enableRX(enableRX), enableTX(enableTX), TXDelay(txDelay), AddCR(addCR){};
+  LoRaTask(QueueHandle_t& _RXQ, bool enableRX = true, bool enableTX = true, const uint txDelay = 1000,
+           const bool addCR = false)
+      : AX25UI_RXQ(_RXQ), enableRX(enableRX), enableTX(enableTX), TXDelay(txDelay), AddCR(addCR){};
 
   std::list<Payload> AX25UI_TXQueue;
-  std::list<Payload> AX25UI_RXQueue;
 
   bool setup(PhysicalLayer* pl);
 

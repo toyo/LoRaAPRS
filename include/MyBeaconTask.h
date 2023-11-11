@@ -16,7 +16,7 @@ class MyBeaconTask {
   static void onBeacon();
 
  public:
-  std::list<AX25UI> RXQueue;
+  std::list<AX25UI> TXQueue;
 
   MyBeaconTask(APRS &_aprs) : aprs(_aprs) {}
 

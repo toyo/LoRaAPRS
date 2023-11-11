@@ -11,8 +11,8 @@ class AX25UI {
   String message;
 
  public:
-  AX25UI() = delete;
-  AX25UI(const AX25UI& c) : FromCall(c.FromCall), ToDigiCalls(c.ToDigiCalls), message(c.message){};
+  AX25UI(){};
+  AX25UI(const AX25UI& c) : FromCall(c.FromCall), message(c.message) { ToDigiCalls = c.ToDigiCalls; };
 
   AX25UI(const uint8_t* data, const size_t len);                 // From RX Message.
   AX25UI(String msg, String from, String to, String digi = "");  // From TX Message.
@@ -20,11 +20,7 @@ class AX25UI {
   String Encode() const;  // To TX Message.
 
   bool isNull() const { return FromCall == ""; }
-  bool isIGATEable() const {
-    return ToDigiCalls.size() > 1 && ToDigiCalls[1] != "TCPIP" && ToDigiCalls[1] != "TCPXX" &&
-           ToDigiCalls[1] != "NOGATE" && ToDigiCalls[1] != "RFONLY" &&
-           message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
-  }
+  bool isIGATEable() const;
 
   String getToDigiCalls(int i) const { return ToDigiCalls[i]; };
   bool findDigiCall(String _call) const {

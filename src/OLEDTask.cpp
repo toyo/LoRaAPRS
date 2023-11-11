@@ -66,6 +66,7 @@ bool OLEDTask::loop() {
         strcat(far, "m");
       }
 
+      Serial.print("OLED: ");
       Serial.print(ui.getFromCall().c_str());
       Serial.print("@");
       Serial.print(aprsThere.Symbol());

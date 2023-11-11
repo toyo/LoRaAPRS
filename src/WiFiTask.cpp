@@ -44,9 +44,9 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
 
     if (laststatus != status) {
       Serial.print(F("Wifi Status Change :"));
-      Serial.print(laststatus);
+      Serial.print(wl_status_t_String(laststatus));
       Serial.print(F(" to "));
-      Serial.println(status);
+      Serial.println(wl_status_t_String(status));
 
       if ((laststatus == WL_NO_SHIELD || laststatus == WL_CONNECTED) && status != WL_CONNECTED) {
         Serial.print(F("Connecting to "));
@@ -97,7 +97,9 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
         } else {
           if (recvline[0] != '#') {
             Payload pkt(recvline, endptr - recvline);
-            RXQueue.push_back(pkt);
+            if (xQueueSend(WifiRXQ, &pkt, 0) != pdPASS) {
+              Serial.println("Cannot enqueue on Wifi.");
+            }
 
             Serial.print("APRSIS->:");
             Serial.println(pkt.toString());

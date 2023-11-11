@@ -1,4 +1,5 @@
 #include <AX25UI.h>
+#include <Arduino.h>
 
 AX25UI::AX25UI(const uint8_t* data, const size_t len) {
   char buffer[257];
@@ -52,4 +53,14 @@ String AX25UI::Encode() const {
   }
 
   return s;
+}
+
+bool AX25UI::isIGATEable() const {
+  if (ToDigiCalls.size() > 1) {
+    return ToDigiCalls[1] != "TCPIP" && ToDigiCalls[1] != "TCPXX" && ToDigiCalls[1] != "NOGATE" &&
+           ToDigiCalls[1] != "RFONLY" && message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
+  } else {
+    Serial.println("NO DIGI to IGATE");
+    return true;
+  }
 }

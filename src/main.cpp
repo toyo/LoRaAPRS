@@ -193,7 +193,7 @@ void setup() {
   xTaskCreateUniversal(
       [](void *) {
         while (1) {
-          AX25UI ui((const unsigned char *)"", 0);
+          AX25UI ui;
           if (xQueueReceive(WiFiAX25toUserQ, &ui, portMAX_DELAY) == pdTRUE) {
             static std::map<String, uint32_t> distList;
             static uint32_t distanceCentiMeter = 3000000;

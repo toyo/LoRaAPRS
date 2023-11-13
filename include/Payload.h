@@ -9,9 +9,9 @@ class Payload {
   size_t len;
 
  public:
-  Payload(const uint8_t *datas, size_t length) {
+  Payload(const uint8_t *datas = NULL, size_t length = 0) {
     len = length;
-    if (len <= sizeof(data)) {
+    if (length != 0 && len <= sizeof(data)) {
       memcpy(data, datas, len);
     } else {
       len = 0;

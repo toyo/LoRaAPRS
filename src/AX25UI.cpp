@@ -3,7 +3,9 @@
 
 AX25UI::AX25UI(const uint8_t* data, const size_t len) {
   char buffer[257];
-  memcpy(buffer, data, len);
+  if (len != 0) {
+    memcpy(buffer, data, len);
+  }
   buffer[len] = 0;
   ToCall[0] = 0;
 

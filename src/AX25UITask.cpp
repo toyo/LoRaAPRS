@@ -16,7 +16,7 @@ void AX25UITask::addUITRACE(String _UITRACE) {
 bool AX25UITask::loop() {
   bool isDo = false;
 
-  Payload recvd((const uint8_t*)"", 0);
+  Payload recvd;
   while (xQueueReceive(PayloadRXQ, &recvd, 0) == pdPASS) {
     AX25UI ui(recvd.getData(), recvd.getLen());
     if (!ui.isNull()) {
@@ -30,7 +30,7 @@ bool AX25UITask::loop() {
           int digiindex;
           if ((digiindex = ui.findNextDigiIndex()) != -1) {  // All listed calls are not digipeated.
             String nextDigi = ui.getDigiCalls(digiindex);    // Got next digipeater call
-            if (nextDigi == CallSign) {                       // Next digipeater call is mine.
+            if (nextDigi == CallSign) {                      // Next digipeater call is mine.
               AX25UI digiUi(ui);
               digiUi.setToDigiCall((CallSign + "*").c_str(), digiindex);
               TXQueue.push_front(digiUi);

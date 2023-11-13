@@ -14,9 +14,7 @@ class AX25UI {
   char message[MAXMSGLEN];
 
  public:
-  AX25UI(){};
-
-  AX25UI(const uint8_t* data, const size_t len);                                  // From RX Message.
+  AX25UI(const uint8_t* data = NULL, const size_t len = 0);                       // From RX Message.
   AX25UI(String msg, const char* from, const char* to, const char* digi = NULL);  // From TX Message.
 
   String Encode() const;  // To TX Message.

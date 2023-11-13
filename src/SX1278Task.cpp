@@ -223,7 +223,7 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
             break;
         }
 
-        Serial.print("LORA->:" + pkt->toString());
+        Serial.print("LORA->: " + pkt->toString());
         Serial.print(String(", ") + pkt->getRSSI() + "dBm, " + pkt->getSNR() + "dB, " + pkt->getFrequencyError() +
                      "Hz");
         if (pkt->getCRCErr()) {

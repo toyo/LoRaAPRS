@@ -26,7 +26,7 @@ bool LoRaTask::taskTX() {
               }
             } else {
               auto xmit = AX25UI_TXQueue.front();
-              Serial.print(F("LORA<-:"));
+              Serial.print(F("LORA<-: "));
               Serial.println(xmit.toString());
               size_t len = xmit.getLen();
               uint8_t data[256];

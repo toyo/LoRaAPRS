@@ -5,6 +5,8 @@
 
 #include "boards.h"
 
+#if defined(XPOWERS_CHIP_AXP192)
+
 class AXP192Task {
   volatile SemaphoreHandle_t pmuSemaphore;
 
@@ -12,4 +14,6 @@ class AXP192Task {
   bool setup();
   bool loop();
 };
+#endif
+
 #endif

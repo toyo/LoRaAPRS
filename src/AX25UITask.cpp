@@ -13,11 +13,9 @@ void AX25UITask::addUITRACE(String _UITRACE) {
   }
 }
 
-bool AX25UITask::loop() {
-  bool isDo = false;
-
+void AX25UITask::taskRX(portTickType xBlockTime) {
   Payload recvd;
-  while (xQueueReceive(PayloadRXQ, &recvd, 0) == pdPASS) {
+  if (xQueueReceive(PayloadRXQ, &recvd, xBlockTime) == pdPASS) {
     AX25UI ui(recvd.getData(), recvd.getLen());
     if (!ui.isNull()) {
       if (xQueueSend(RXQ, &ui, 0) != pdTRUE) {
@@ -54,11 +52,11 @@ bool AX25UITask::loop() {
         }
       }
     }
-    isDo = true;
-
-    // delete ui;
   }
+}
 
+bool AX25UITask::loopTX() {
+  bool isDo = false;
   while (!TXQueue.empty() && PayloadTXQueue.empty()) {
     AX25UI ui(TXQueue.front());
     if (!ui.isNull()) {

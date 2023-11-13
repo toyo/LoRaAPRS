@@ -46,21 +46,19 @@ bool AXP192Task::setup() {
   return true;
 }
 
-bool AXP192Task::loop() {
-  if (xSemaphoreTake(pmuSemaphore, 0) == pdTRUE) {
+void AXP192Task::task() {
+  if (xSemaphoreTake(pmuSemaphore, portMAX_DELAY) == pdTRUE) {
     // Get AXP192 Interrupt Status Register
     axp.getIrqStatus();
 
     if (axp.isPekeyLongPressIrq()) {
       Serial.println("PowerOff.");
       axp.shutdown();
-      delay(1000);
+      vTaskDelay(1000 / portTICK_RATE_MS);
       // never reach here.
     }
     axp.clearIrqStatus();
-    return true;
-  } else {
-    return false;
+    return;
   }
 }
 

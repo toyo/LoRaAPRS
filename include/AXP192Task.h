@@ -12,7 +12,7 @@ class AXP192Task {
 
  public:
   bool setup();
-  bool loop();
+  void task();
 };
 #endif
 

@@ -44,12 +44,12 @@ bool LoRaTask::taskTX() {
               transmissionState = phyLayer->startTransmit(data, len);
               TXStart = millis();
               AX25UI_TXQueue.pop_front();
+              isDo = true;
             }
           }
         }
       }
     }
-    isDo = true;
   }
   return isDo;
 }

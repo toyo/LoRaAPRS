@@ -35,17 +35,15 @@ void setup() {
       break;
   }
 
+  enableCore1WDT();
+
 #if defined(XPOWERS_CHIP_AXP192)
   xTaskCreateUniversal(
       [](void *) {
         static AXP192Task AXP192;
         AXP192.setup();
         while (1) {
-          bool isDo = false;
-          isDo = AXP192.loop() || isDo;
-          if (!isDo) {
-            vTaskDelay(500 / portTICK_RATE_MS);
-          }
+          AXP192.task();
         }
       },
       "AXP192Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
@@ -59,7 +57,7 @@ void setup() {
       [](void *) {
         GPS.setup();
         while (1) {
-          if (!GPS.loop()) delay(100);
+          if (!GPS.loop()) vTaskDelay(100 / portTICK_RATE_MS);
         }
       },
       "GPSTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
@@ -73,7 +71,7 @@ void setup() {
       [](void *) {
         OLED.setup();
         while (1) {
-          if (!OLED.loop()) delay(100);
+          if (!OLED.loop()) vTaskDelay(100 / portTICK_RATE_MS);
         }
       },
       "OLEDTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
@@ -118,16 +116,26 @@ void setup() {
   static QueueHandle_t LoRaAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
   static AX25UITask LoRaAX25(LoRaToAX25Q, LoRa.AX25UI_TXQueue, LoRaAX25toUserQ);
 
-  xTaskCreateUniversal(  // LoRa AX25
+  LoRaAX25.setup();
+  LoRaAX25.addUITRACE(c.digi.uitrace);
+  LoRaAX25.setCallSign(c.callsign, true);
+  xTaskCreateUniversal(  // LoRa AX25 RX
       [](void *) {
-        LoRaAX25.setup();
-        LoRaAX25.addUITRACE(c.digi.uitrace);
-        LoRaAX25.setCallSign(c.callsign, true);
         while (1) {
-          if (!LoRaAX25.loop()) delay(100);
+          LoRaAX25.taskRX(portMAX_DELAY);
         }
       },
-      "LoRaAX25Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "LoRaAX25RXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
+  xTaskCreateUniversal(  // LoRa AX25 TX
+      [](void *) {
+        while (1) {
+          if (!LoRaAX25.loopTX()) {
+            vTaskDelay(500 / portTICK_RATE_MS);
+          };
+        }
+      },
+      "LoRaAX25TXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
   // WiFi
 #ifdef ENABLE_WIFI
@@ -143,7 +151,7 @@ void setup() {
           Wifi.setup(&aprsHere.getLatLng(), 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
         }
         while (1) {
-          if (!Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str())) delay(100);
+          if (!Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str())) vTaskDelay(100 / portTICK_RATE_MS);
         }
       },
       "WiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
@@ -151,15 +159,24 @@ void setup() {
   static QueueHandle_t WiFiAX25toUserQ = xQueueCreate(10, sizeof(AX25UI));
   static AX25UITask WiFiAX25(WiFiToAX25Q, Wifi.TXQueue, WiFiAX25toUserQ);
 
+  WiFiAX25.setup();
+  WiFiAX25.setCallSign(c.callsign, false);
   xTaskCreateUniversal(  // WiFiAX25
       [](void *) {
-        WiFiAX25.setup();
-        WiFiAX25.setCallSign(c.callsign, false);
         while (1) {
-          if (!WiFiAX25.loop()) delay(100);
+          WiFiAX25.taskRX(portMAX_DELAY);
         }
       },
-      "WiFiAX25Task", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+      "WiFiAX25RXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+  xTaskCreateUniversal(  // WiFiAX25
+      [](void *) {
+        while (1) {
+          if (!WiFiAX25.loopTX()) {
+            vTaskDelay(500 / portTICK_RATE_MS);
+          };
+        }
+      },
+      "WiFiAX25TXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
 #endif
 

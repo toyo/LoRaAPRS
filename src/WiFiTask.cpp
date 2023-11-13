@@ -98,9 +98,9 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
           if (recvline[0] != '#') {
             Payload pkt(recvline, endptr - recvline);
             if (xQueueSend(WifiRXQ, &pkt, 0) != pdPASS) {
-              Serial.println("Cannot enqueue on Wifi.");
+              Serial.println("WiFi RX Buffer Overflow, continues.");
+              Serial.print("NO ");
             }
-
             Serial.print("APRSIS->:");
             Serial.println(pkt.toString());
           } else {

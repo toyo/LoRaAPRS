@@ -130,7 +130,7 @@ void setup() {
       },
       "LoRaTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
-  WiFiAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
+  WiFiAX25toUserQ = xQueueCreate(10, sizeof(AX25UI));
 
   xTaskCreateUniversal(
       [](void *) {
@@ -179,7 +179,7 @@ void setup() {
             AX25UI ui = MyBeacon.TXQueue.front();
             WiFiAX25.TXQueue.push_front(ui);
             if (c.beacon.digipath != "") {
-              ui.AppendDigiCall(c.beacon.digipath);
+              ui.AppendDigiCall(c.beacon.digipath.c_str());
             }
             LoRaAX25.TXQueue.push_front(ui);
             MyBeacon.TXQueue.pop_front();
@@ -215,7 +215,7 @@ void setup() {
                 }
                 ui->EraseDigiCalls();
                 ui->AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
-                ui->AppendDigiCall(c.callsign + "*");
+                ui->AppendDigiCall((c.callsign + "*").c_str());
                 LoRaAX25.TXQueue.push_back(*ui);
               } else {
                 if (LoRaAX25.TXQueueSize() == 0) {
@@ -238,7 +238,7 @@ void setup() {
           AX25UI ui;
           if (xQueueReceive(LoRaAX25toUserQ, &ui, portMAX_DELAY) == pdTRUE) {
             if (ui.isIGATEable()) {
-              ui.AppendDigiCall(c.callsign);
+              ui.AppendDigiCall(c.callsign.c_str());
               ui.AppendDigiCall("I");  // http://www.aprs-is.net/q.aspx , to set qAR.
               WiFiAX25.TXQueue.push_back(ui);
             }

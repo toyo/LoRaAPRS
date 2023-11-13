@@ -24,14 +24,15 @@ bool AX25UITask::loop() {
         Serial.println("error sending AX25 to user.");
       }
       if (digipeat) {  // work as digi.
-        if (!ui->findDigiCall(CallSign + "*") && ui->getFromCall() != CallSign) {
+        if (!ui->findDigiCall((CallSign + "*").c_str()) &&
+            strncmp(ui->getFromCall(), CallSign.c_str(), MAXCALLSIGNLEN) != 0) {
           // my call is not in digipeated list or sender.
           int digiindex;
           if ((digiindex = ui->findNextDigiIndex()) != -1) {  // All listed calls are not digipeated.
-            String nextDigi = ui->getToDigiCalls(digiindex);  // Got next digipeater call
+            String nextDigi = ui->getDigiCalls(digiindex);    // Got next digipeater call
             if (nextDigi == CallSign) {                       // Next digipeater call is mine.
               AX25UI digiUi(*ui);
-              digiUi.setToDigiCall(CallSign + "*", digiindex);
+              digiUi.setToDigiCall((CallSign + "*").c_str(), digiindex);
               TXQueue.push_front(digiUi);
             } else {
               int index = nextDigi.indexOf('-');
@@ -40,10 +41,10 @@ bool AX25UITask::loop() {
                 if (std::find(UITRACE.begin(), UITRACE.end(), digicall) != UITRACE.end()) {
                   //   http://www.aprs.org/fix14439.html
                   AX25UI digiUi(*ui);
-                  digiUi.setToDigiCall(CallSign + "*", digiindex);           // Add digipeated.
-                  int digissid = nextDigi.substring(index + 1).toInt() - 1;  // SSID decrement
+                  digiUi.setToDigiCall((CallSign + "*").c_str(), digiindex);  // Add digipeated.
+                  int digissid = nextDigi.substring(index + 1).toInt() - 1;   // SSID decrement
                   if (digissid > 0) {
-                    digiUi.addToDigiCall(digicall + "-" + digissid, digiindex + 1);
+                    digiUi.addToDigiCall((digicall + "-" + digissid).c_str(), digiindex + 1);
                   }
                   TXQueue.push_front(digiUi);
                 }

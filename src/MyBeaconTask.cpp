@@ -27,7 +27,7 @@ bool MyBeaconTask::task(portTickType xBlockTime) {
   if (xSemaphoreTake(beaconSemaphore, xBlockTime) == pdTRUE) {
     Serial.println("Send Beacon");
     if (aprs.getLatLng().isValid()) {
-      AX25UI ui(aprs.Encode(), CallSign, aprs.getToCall());
+      AX25UI ui(aprs.Encode(), CallSign.c_str(), aprs.getToCall().c_str());
       TXQueue.push_front(ui);
       return true;
     } else {

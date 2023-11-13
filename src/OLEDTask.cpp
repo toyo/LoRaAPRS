@@ -39,7 +39,7 @@ bool OLEDTask::loop() {
     u8g2.clearBuffer();
 
     u8g2.setFont(u8g2_font_helvR14_tr);
-    u8g2.drawStr(0, 16, ui.getFromCall().c_str());
+    u8g2.drawStr(0, 16, ui.getFromCall());
 
     u8g2.setFont(u8g2_font_helvB10_tf);
     u8g2.drawStr(0, 60, aprsThere.GetMessage().c_str());
@@ -67,7 +67,7 @@ bool OLEDTask::loop() {
       }
 
       Serial.print("OLED: ");
-      Serial.print(ui.getFromCall().c_str());
+      Serial.print(ui.getFromCall());
       Serial.print("@");
       Serial.print(aprsThere.Symbol());
       Serial.print("/");

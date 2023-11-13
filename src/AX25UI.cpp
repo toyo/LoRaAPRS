@@ -5,6 +5,7 @@ AX25UI::AX25UI(const uint8_t* data, const size_t len) {
   char buffer[257];
   memcpy(buffer, data, len);
   buffer[len] = 0;
+  ToCall[0] = 0;
 
   char *saveptr, *retval;
 
@@ -13,7 +14,7 @@ AX25UI::AX25UI(const uint8_t* data, const size_t len) {
   if (retval == nullptr) {
     return;
   }
-  FromCall = retval;
+  strlcpy(FromCall, retval, MAXCALLSIGNLEN);
 
   retval = strtok_r(nullptr, ":", &saveptr);
   if (retval == nullptr) {
@@ -21,44 +22,52 @@ AX25UI::AX25UI(const uint8_t* data, const size_t len) {
   }
 
   char* p = retval;
-  message = saveptr;
+  strlcpy(message, saveptr, MAXMSGLEN);
 
+  numDigiCalls = 0;
   saveptr = nullptr;
   while ((retval = strtok_r(p, ",", &saveptr)) != nullptr) {
-    ToDigiCalls.push_back(retval);
+    if (ToCall[0] == 0) {
+      strlcpy(ToCall, retval, MAXCALLSIGNLEN);
+    } else {
+      strlcpy(DigiCalls[numDigiCalls++], retval, MAXCALLSIGNLEN);
+    }
     p = nullptr;
   }
 }
 
-AX25UI::AX25UI(String msg, String from, String to, String digi) {
-  ToDigiCalls.erase(ToDigiCalls.begin(), ToDigiCalls.end());
-  FromCall = from;
-  ToDigiCalls.push_front(to);
-  if (digi != "") {
-    ToDigiCalls.push_back(digi);
+AX25UI::AX25UI(String msg, const char* from, const char* to, const char* digi) {
+  numDigiCalls = 0;
+
+  strlcpy(FromCall, from, MAXCALLSIGNLEN);
+  strlcpy(ToCall, to, MAXCALLSIGNLEN);
+  if (digi != NULL) {
+    strlcpy(DigiCalls[0], digi, MAXCALLSIGNLEN);
+    numDigiCalls = 1;
   }
-  message = msg;
+  strlcpy(message, msg.c_str(), MAXMSGLEN);
 }
 
 String AX25UI::Encode() const {
   String s;
-  if (FromCall != "") {
-    s += FromCall + ">";
+  if (FromCall[0] != 0) {
+    s = String(FromCall) + ">";
+    s += String(ToCall) + ",";
 
-    for (std::deque<String>::const_iterator ite = ToDigiCalls.begin(); ite != ToDigiCalls.end(); ++ite) {
-      s += *ite + ",";
+    for (int i = 0; i < numDigiCalls; i++) {
+      s += String(DigiCalls[i]) + ",";
     }
     s.remove(s.length() - 1);
-    s += ":" + message;
+    s += ":" + String(message);
   }
 
   return s;
 }
 
 bool AX25UI::isIGATEable() const {
-  if (ToDigiCalls.size() > 1) {
-    return ToDigiCalls[1] != "TCPIP" && ToDigiCalls[1] != "TCPXX" && ToDigiCalls[1] != "NOGATE" &&
-           ToDigiCalls[1] != "RFONLY" && message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
+  if (numDigiCalls != 0) {
+    return DigiCalls[0] != "TCPIP" && DigiCalls[0] != "TCPXX" && DigiCalls[0] != "NOGATE" && DigiCalls[0] != "RFONLY" &&
+           message[0] != '?';  // http://www.aprs-is.net/IGateDetails.aspx
   } else {
     Serial.println("NO DIGI to IGATE");
     return true;

@@ -3,49 +3,63 @@
 
 #include <WString.h>
 
-#include <deque>
+#define MAXCALLSIGNLEN 16
+#define MAXMSGLEN 300
 
 class AX25UI {
-  String FromCall;
-  std::deque<String> ToDigiCalls;
-  String message;
+  char FromCall[MAXCALLSIGNLEN];
+  char ToCall[MAXCALLSIGNLEN];
+  char DigiCalls[8][MAXCALLSIGNLEN];
+  uint8_t numDigiCalls;
+  char message[MAXMSGLEN];
 
  public:
   AX25UI(){};
-  AX25UI(const AX25UI& c) : FromCall(c.FromCall), message(c.message) { ToDigiCalls = c.ToDigiCalls; };
 
-  AX25UI(const uint8_t* data, const size_t len);                 // From RX Message.
-  AX25UI(String msg, String from, String to, String digi = "");  // From TX Message.
+  AX25UI(const uint8_t* data, const size_t len);                                  // From RX Message.
+  AX25UI(String msg, const char* from, const char* to, const char* digi = NULL);  // From TX Message.
 
   String Encode() const;  // To TX Message.
 
-  bool isNull() const { return FromCall == ""; }
+  bool isNull() const { return FromCall[0] == 0; }
   bool isIGATEable() const;
 
-  String getToDigiCalls(int i) const { return ToDigiCalls[i]; };
-  bool findDigiCall(String _call) const {
-    for (String call : ToDigiCalls) {
-      if (call == _call) {
+  String getDigiCalls(int i) const { return DigiCalls[i]; };
+
+  bool findDigiCall(const char* _call) const {
+    for (int i = 0; i < numDigiCalls; i++) {
+      if (strncmp(DigiCalls[i], _call, MAXCALLSIGNLEN) == 0) {
         return true;
       }
     }
     return false;
   }
   int8_t findNextDigiIndex() const {
-    int len = ToDigiCalls.size();
-    for (int digiindex = 1; digiindex < len; digiindex++) {
-      if (ToDigiCalls[digiindex].indexOf("*") == -1) {
+    int len = numDigiCalls;
+    for (int digiindex = 0; digiindex < len; digiindex++) {
+      if (String(DigiCalls[digiindex]).indexOf("*") == -1) {
         return digiindex;
       }
     }
     return -1;
   }
-  String getFromCall() const { return FromCall; }
-  String GetToCall() const { return ToDigiCalls[0]; }
+  const char* getFromCall() { return FromCall; }
+  String GetToCall() const { return ToCall; }
   String Payload() const { return message; }
-  void setToDigiCall(String call, int num) { ToDigiCalls[num] = call; }
-  void addToDigiCall(String call, int num) { ToDigiCalls.insert(ToDigiCalls.begin() + num, call); }
-  void EraseDigiCalls() { ToDigiCalls.erase(ToDigiCalls.begin() + 1, ToDigiCalls.end()); }
-  void AppendDigiCall(String digicall) { ToDigiCalls.push_back(digicall); }
+  void setToDigiCall(const char* call, int num) {
+    strlcpy(DigiCalls[num], call, MAXCALLSIGNLEN);
+    if (numDigiCalls < num) {
+      numDigiCalls = num;
+    }
+  }
+  void addToDigiCall(const char* call, int num) {
+    for (int i = num; i < numDigiCalls + 1; i++) {
+      strlcpy(DigiCalls[i + 1], DigiCalls[i], MAXCALLSIGNLEN);
+    }
+    strlcpy(DigiCalls[num], call, MAXCALLSIGNLEN);
+    numDigiCalls++;
+  }
+  void EraseDigiCalls() { numDigiCalls = 0; }
+  void AppendDigiCall(const char* digicall) { strlcpy(DigiCalls[numDigiCalls++], digicall, MAXCALLSIGNLEN); }
 };
 #endif  //__AX25UI_H_

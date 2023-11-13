@@ -48,6 +48,7 @@ class WiFiTask {
       case WL_DISCONNECTED:
         return "WL_DISCONNECTED";
     }
+    return "Unknown Wifi Status.";
   }
 #endif  // ENABLE_WIFI
 

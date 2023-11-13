@@ -193,17 +193,17 @@ void setup() {
   xTaskCreateUniversal(
       [](void *) {
         while (1) {
-          AX25UI *ui = new AX25UI((const unsigned char *)"", 0);
-          if (xQueueReceive(WiFiAX25toUserQ, ui, portMAX_DELAY) == pdTRUE) {
+          AX25UI ui((const unsigned char *)"", 0);
+          if (xQueueReceive(WiFiAX25toUserQ, &ui, portMAX_DELAY) == pdTRUE) {
             static std::map<String, uint32_t> distList;
             static uint32_t distanceCentiMeter = 3000000;
 
-            APRS aprsThere(*ui);
+            APRS aprsThere(ui);
             if (aprsThere.HasLocation()) {
-              distList[ui->getFromCall()] = aprsHere.distancecmFrom(aprsThere);
+              distList[ui.getFromCall()] = aprsHere.distancecmFrom(aprsThere);
             }
-            if (distList.find(ui->getFromCall()) != distList.end()) {
-              if (distList[ui->getFromCall()] < distanceCentiMeter) {
+            if (distList.find(ui.getFromCall()) != distList.end()) {
+              if (distList[ui.getFromCall()] < distanceCentiMeter) {
                 size_t txQueueSize = LoRaAX25.TXQueueSize();
                 if (txQueueSize >= 1) {
                   distanceCentiMeter /= pow(1.05, txQueueSize);
@@ -213,10 +213,10 @@ void setup() {
                     goto done;
                   }
                 }
-                ui->EraseDigiCalls();
-                ui->AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
-                ui->AppendDigiCall((c.callsign + "*").c_str());
-                LoRaAX25.TXQueue.push_back(*ui);
+                ui.EraseDigiCalls();
+                ui.AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
+                ui.AppendDigiCall((c.callsign + "*").c_str());
+                LoRaAX25.TXQueue.push_back(ui);
               } else {
                 if (LoRaAX25.TXQueueSize() == 0) {
                   distanceCentiMeter *= 1.05;
@@ -226,7 +226,7 @@ void setup() {
             }
 
           done:
-            OLED.ShowUI(*ui);
+            OLED.ShowUI(ui);
           }
         }
       },

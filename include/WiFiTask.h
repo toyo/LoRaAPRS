@@ -7,8 +7,6 @@
 #include <WiFi.h>
 #endif  // ENABLE_WIFI
 
-#include <list>
-
 #include "LatLng.h"
 #include "Payload.h"
 
@@ -53,15 +51,14 @@ class WiFiTask {
 #endif  // ENABLE_WIFI
 
   QueueHandle_t &WifiRXQ;
+  QueueHandle_t &WifiTXQ;
 
  public:
-  WiFiTask(QueueHandle_t &_RXQ) : WifiRXQ(_RXQ){};
+  WiFiTask(QueueHandle_t &_RXQ, QueueHandle_t &_TXQ) : WifiRXQ(_RXQ), WifiTXQ(_TXQ){};
 
   bool setup(LatLng *l, uint distKm = 50, const char *callsign = "N0CALL", const char *passcode = "00000",
              const char *host = "rotate.aprs2.net", const int httpPort = 14580, bool enableRX = true,
              bool enableTX = true);
   bool loop(const char *SSID, const char *password);
-
-  std::list<Payload> TXQueue;
 };
 #endif

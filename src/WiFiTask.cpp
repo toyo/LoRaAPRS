@@ -51,7 +51,7 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
       if ((laststatus == WL_NO_SHIELD || laststatus == WL_CONNECTED) && status != WL_CONNECTED) {
         Serial.print(F("Connecting to "));
         Serial.println(SSID);
-
+        vTaskDelay(1);
         WiFi.begin(SSID, password);
       } else if (laststatus != WL_CONNECTED && status == WL_CONNECTED) {
         Serial.print(F("WiFi connected. Local IPv4: "));
@@ -115,16 +115,16 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
       isDo = true;
     }
 #endif  // ENABLE_WIFI
-    while (!TXQueue.empty()) {
-      Payload xmit(TXQueue.front(), true);
+
+    Payload xmit((const unsigned char *)"", 0);
+    while (xQueueReceive(WifiTXQ, &xmit, 0) == pdTRUE) {
 #ifdef ENABLE_WIFI
       if (enableTX) {
-        Serial.print(F("APRSIS<-:"));
+        Serial.print(F("APRSIS<-: "));
         Serial.println(xmit.toString());
         client.write(xmit.getData(), xmit.getLen());
       }
 #endif  // ENABLE_WIFI
-      TXQueue.pop_front();
       isDo = true;
     }
   }

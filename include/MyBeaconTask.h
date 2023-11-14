@@ -3,8 +3,6 @@
 
 #include <Arduino.h>
 
-#include <list>
-
 #include "APRS.h"
 #include "boards.h"
 
@@ -15,14 +13,16 @@ class MyBeaconTask {
   static volatile SemaphoreHandle_t beaconSemaphore;
   static void onBeacon();
 
- public:
-  std::list<AX25UI> TXQueue;
+  QueueHandle_t &TXQueue;
 
-  MyBeaconTask(APRS &_aprs) : aprs(_aprs) {}
+  TimerHandle_t xAutoReloadTimer;
+
+ public:
+  MyBeaconTask(APRS &_aprs, QueueHandle_t &_TXQueue) : aprs(_aprs), TXQueue(_TXQueue) {}
 
   bool setup(String _callsign, uint timeoutSec);
 
   bool loop();
-  bool task(portTickType xBlockTime);
+  void task(portTickType xBlockTime);
 };
 #endif

@@ -13,19 +13,21 @@ bool LoRaTask::taskTX() {
   bool isDo = false;
 
   if (!enableTX) {
-    while (!AX25UI_TXQueue.empty()) AX25UI_TXQueue.pop_front();
+    Payload xmit;
+    while (xQueueReceive(AX25UI_TXQ, &xmit, 0) == pdTRUE)
+      ;
   } else {
     if (!nowTX && RXCarrierDetected == 0 && TXEnd - TXStart >= 0 /* transmit completed */) {
       unsigned long now = millis();
       if (now - RXEnd > TXDelay) {
         if (now - TXEnd > (100 / dutyPercent - 1) * (TXEnd - TXStart)) {
-          if (!AX25UI_TXQueue.empty()) {
+          Payload xmit;
+          if (xQueueReceive(AX25UI_TXQ, &xmit, 0) == pdTRUE) {
             if (carrierDetected()) {  // Carrier detected.
               if (validHeaderDetected()) {
                 RXCarrierDetected = millis();
               }
             } else {
-              auto xmit = AX25UI_TXQueue.front();
               Serial.print(F("LORA<-: "));
               Serial.println(xmit.toString());
               size_t len = xmit.getLen();
@@ -43,7 +45,6 @@ bool LoRaTask::taskTX() {
               nowTX = true;
               transmissionState = phyLayer->startTransmit(data, len);
               TXStart = millis();
-              AX25UI_TXQueue.pop_front();
               isDo = true;
             }
           }

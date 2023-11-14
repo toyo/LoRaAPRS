@@ -54,7 +54,7 @@ void AXP192Task::task() {
     if (axp.isPekeyLongPressIrq()) {
       Serial.println("PowerOff.");
       axp.shutdown();
-      vTaskDelay(1000 / portTICK_RATE_MS);
+      vTaskDelay(pdMS_TO_TICKS(1000));
       // never reach here.
     }
     axp.clearIrqStatus();

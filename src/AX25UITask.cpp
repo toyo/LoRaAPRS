@@ -15,10 +15,10 @@ void AX25UITask::addUITRACE(String _UITRACE) {
 
 void AX25UITask::taskRX(portTickType xBlockTime) {
   Payload recvd;
-  if (xQueueReceive(PayloadRXQ, &recvd, xBlockTime) == pdPASS) {
+  if (xQueueReceive(PayloadRXQ, &recvd, xBlockTime) == pdTRUE) {
     AX25UI ui(recvd.getData(), recvd.getLen());
     if (!ui.isNull()) {
-      if (xQueueSend(RXQ, &ui, 0) != pdTRUE) {
+      if (xQueueSend(AX25UIRXQ, &ui, 0) != pdTRUE) {
         Serial.println("error sending AX25 to user.");
       }
       if (digipeat) {  // work as digi.
@@ -31,7 +31,7 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
             if (nextDigi == CallSign) {                      // Next digipeater call is mine.
               AX25UI digiUi(ui);
               digiUi.setToDigiCall((CallSign + "*").c_str(), digiindex);
-              TXQueue.push_front(digiUi);
+              xQueueSendToFront(AX25UITXQ, &digiUi, portMAX_DELAY);
             } else {
               int index = nextDigi.indexOf('-');
               if (index != -1) {                                 // Has SSID
@@ -44,7 +44,7 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
                   if (digissid > 0) {
                     digiUi.addToDigiCall((digicall + "-" + digissid).c_str(), digiindex + 1);
                   }
-                  TXQueue.push_front(digiUi);
+                  xQueueSendToFront(AX25UITXQ, &digiUi, portMAX_DELAY);
                 }
               }
             }
@@ -57,15 +57,17 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
 
 bool AX25UITask::loopTX() {
   bool isDo = false;
-  while (!TXQueue.empty() && PayloadTXQueue.empty()) {
-    AX25UI ui(TXQueue.front());
-    if (!ui.isNull()) {
-      PayloadTXQueue.push_back(ui.Encode());
+  while (uxQueueMessagesWaiting(AX25UITXQ) != 0 && uxQueueMessagesWaiting(PayloadTXQ) == 0) {
+    AX25UI ui;
+    if (xQueueReceive(AX25UITXQ, &ui, 0) == pdTRUE) {
+      if (!ui.isNull()) {
+        Payload uip(ui.Encode());
+        xQueueSend(PayloadTXQ, &uip, portMAX_DELAY);
+      }
+      isDo = true;
     }
-    TXQueue.pop_front();
-    isDo = true;
   }
   return isDo;
 }
 
-size_t AX25UITask::TXQueueSize() { return TXQueue.size() + PayloadTXQueue.size(); }
+size_t AX25UITask::TXQueueSize() { return uxQueueMessagesWaiting(AX25UITXQ) + uxQueueMessagesWaiting(PayloadTXQ); }

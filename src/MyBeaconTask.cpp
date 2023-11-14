@@ -2,16 +2,13 @@
 
 volatile SemaphoreHandle_t MyBeaconTask::beaconSemaphore;
 
-hw_timer_t* timer = NULL;
-
 void IRAM_ATTR MyBeaconTask::onBeacon() { xSemaphoreGiveFromISR(MyBeaconTask::beaconSemaphore, NULL); }
 
 bool MyBeaconTask::setup(String _callsign, uint timeoutSec) {
   beaconSemaphore = xSemaphoreCreateBinary();
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, onBeacon, true);
-  timerAlarmWrite(timer, timeoutSec * 1000000, true);
-  timerAlarmEnable(timer);
+  xAutoReloadTimer = xTimerCreate("AutoReload", pdMS_TO_TICKS(timeoutSec * 1000), pdTRUE, 0,
+                                  [](void*) { xSemaphoreGive(MyBeaconTask::beaconSemaphore); });
+  xTimerStart(xAutoReloadTimer, portMAX_DELAY);
 
 #if BUTTON1 != -1
   attachInterrupt(BUTTON1, onBeacon, RISING);
@@ -21,20 +18,20 @@ bool MyBeaconTask::setup(String _callsign, uint timeoutSec) {
   return true;
 }
 
-bool MyBeaconTask::loop() { return task(0); }
+bool MyBeaconTask::loop() {
+  task(0);
+  return true;
+}
 
-bool MyBeaconTask::task(portTickType xBlockTime) {
+void MyBeaconTask::task(portTickType xBlockTime) {
   if (xSemaphoreTake(beaconSemaphore, xBlockTime) == pdTRUE) {
     Serial.println("Send Beacon");
     if (aprs.getLatLng().isValid()) {
       AX25UI ui(aprs.Encode(), CallSign.c_str(), aprs.getToCall().c_str());
-      TXQueue.push_front(ui);
-      return true;
-    } else {
-      return false;
+      xQueueSendToFront(TXQueue, &ui, portMAX_DELAY);
     }
+    vTaskDelay(pdMS_TO_TICKS(1000));
     while (xSemaphoreTake(beaconSemaphore, 0) == pdTRUE)
       ;  // to avoid chattering
   }
-  return false;
 }

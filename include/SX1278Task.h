@@ -30,8 +30,8 @@ class SX1278Task : public LoRaTask {
   virtual bool startReceive() const;
 
  public:
-  SX1278Task(QueueHandle_t& _RXQ, uint32_t cs, uint32_t irq, uint32_t rst, uint32_t gpio, bool enableRX = true,
-             bool enableTX = true, uint8_t _syncWord = RADIOLIB_SX127X_SYNC_WORD);
+  SX1278Task(QueueHandle_t& _RXQ, QueueHandle_t& _TXQ, uint32_t cs, uint32_t irq, uint32_t rst, uint32_t gpio,
+             bool enableRX = true, bool enableTX = true, uint8_t _syncWord = RADIOLIB_SX127X_SYNC_WORD);
 
   bool setup(SPIClass& spi, float freq, float bw = 20.8, uint8_t sf = 11, uint8_t cr = 6, int8_t power = 2,
              uint8_t gain = 0, uint8_t _dutyPercent = 50, uint16_t preambleLength = 8);

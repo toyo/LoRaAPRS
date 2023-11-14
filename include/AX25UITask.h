@@ -1,7 +1,6 @@
 #ifndef AX25UITask_h
 #define AX25UITask_h
 
-#include <list>
 #include <set>
 
 #include "AX25UI.h"
@@ -9,19 +8,20 @@
 
 class AX25UITask {
   QueueHandle_t &PayloadRXQ;
-  std::list<Payload> &PayloadTXQueue;
-  QueueHandle_t &RXQ;
+  QueueHandle_t &PayloadTXQ;
+  QueueHandle_t &AX25UIRXQ;
+  QueueHandle_t &AX25UITXQ;
 
   String CallSign;
   bool digipeat;
 
-  std::set<String> UITRACE;
+  std::set<String> UITRACE;  // like "WIDE1"
 
  public:
-  std::list<AX25UI> TXQueue;
   AX25UITask() = delete;
-  AX25UITask(QueueHandle_t &_PayloadRXQ, std::list<Payload> &_TXQueue, QueueHandle_t &_RXQ)
-      : PayloadRXQ(_PayloadRXQ), PayloadTXQueue(_TXQueue), RXQ(_RXQ) {}
+  AX25UITask(QueueHandle_t &_PayloadRXQ, QueueHandle_t &_PayloadTXQ, QueueHandle_t &_AX25UIRXQ,
+             QueueHandle_t &_AX25UITXQ)
+      : PayloadRXQ(_PayloadRXQ), PayloadTXQ(_PayloadTXQ), AX25UIRXQ(_AX25UIRXQ), AX25UITXQ(_AX25UITXQ) {}
 
   void setCallSign(String _CallSign, bool _digipeat = true);
 

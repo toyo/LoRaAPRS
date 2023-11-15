@@ -72,10 +72,15 @@ void setup() {
   static Config c;
   c.begin();
 
+  //
+
+  static APRS aprsHere(GPS);
+  aprsHere.set(c.beacon.latitude, c.beacon.longitude, c.beacon.ambiguity, c.beacon.message);
+
   // LoRa
 
   static QueueHandle_t LoRaToAX25Q = xQueueCreate(4, sizeof(Payload));
-  static QueueHandle_t AX25ToLoRaQ = xQueueCreate(4, sizeof(Payload));
+  static QueueHandle_t AX25ToLoRaQ = xQueueCreate(1, sizeof(Payload));
 
 #if defined(ARDUINO_TTGO_LoRa32_v21new)
   static SX1278Task LoRa(LoRaToAX25Q, AX25ToLoRaQ, LORA_CS, LORA_IRQ, RADIOLIB_NC, RADIOLIB_NC);
@@ -102,40 +107,10 @@ void setup() {
   xTaskCreateUniversal(  // LoRaTX
       [](void *) {
         while (1) {
-          if (!LoRa.taskTX()) {
-            vTaskDelay(pdMS_TO_TICKS(500));
-          }
+          LoRa.taskTX(portMAX_DELAY);
         }
       },
       "LoRaTXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
-
-  //
-
-  static APRS aprsHere(GPS);
-  aprsHere.set(c.beacon.latitude, c.beacon.longitude, c.beacon.ambiguity, c.beacon.message);
-
-  // WiFi
-#ifdef ENABLE_WIFI
-
-  static QueueHandle_t WiFiToAX25Q = xQueueCreate(4, sizeof(Payload));
-  static QueueHandle_t AX25ToWiFiQ = xQueueCreate(4, sizeof(Payload));
-
-  static WiFiTask Wifi(WiFiToAX25Q, AX25ToWiFiQ);
-
-  xTaskCreateUniversal(  // WiFi
-      [](void *) {
-        if (c.beacon.timeoutSec != 0) {
-          Wifi.setup(nullptr, 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
-        } else {
-          Wifi.setup(&aprsHere.getLatLng(), 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
-        }
-        while (1) {
-          if (!Wifi.loop(c.wifi.SSID.c_str(), c.wifi.password.c_str())) vTaskDelay(pdMS_TO_TICKS(100));
-        }
-      },
-      "WiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
-
-#endif
 
   //
 
@@ -157,17 +132,40 @@ void setup() {
   xTaskCreateUniversal(  // LoRa AX25 TX
       [](void *) {
         while (1) {
-          if (!LoRaAX25.loopTX()) {
-            vTaskDelay(pdMS_TO_TICKS(500));
-          };
+          LoRaAX25.taskTX(portMAX_DELAY);
         }
       },
       "LoRaAX25TXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
+  // WiFi
 #ifdef ENABLE_WIFI
 
-  static QueueHandle_t WiFiAX25toUserQ = xQueueCreate(10, sizeof(AX25UI));
-  static QueueHandle_t UserToWiFiAX25Q = xQueueCreate(10, sizeof(AX25UI));
+  static QueueHandle_t WiFiToAX25Q = xQueueCreate(4, sizeof(Payload));
+  static QueueHandle_t AX25ToWiFiQ = xQueueCreate(4, sizeof(Payload));
+
+  static WiFiTask Wifi(WiFiToAX25Q, AX25ToWiFiQ);
+
+  xTaskCreateUniversal(  // WiFi
+      [](void *) {
+        if (c.beacon.timeoutSec != 0) {
+          Wifi.setup(nullptr, 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
+        } else {
+          Wifi.setup(&aprsHere.getLatLng(), 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
+        }
+        while (1) {
+          Wifi.task(c.wifi.SSID.c_str(), c.wifi.password.c_str());
+        }
+      },
+      "WiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
+
+#endif
+
+  //
+
+#ifdef ENABLE_WIFI
+
+  static QueueHandle_t WiFiAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
+  static QueueHandle_t UserToWiFiAX25Q = xQueueCreate(4, sizeof(AX25UI));
 
   static AX25UITask WiFiAX25(WiFiToAX25Q, AX25ToWiFiQ, WiFiAX25toUserQ, UserToWiFiAX25Q);
 
@@ -183,16 +181,14 @@ void setup() {
   xTaskCreateUniversal(  // WiFiAX25
       [](void *) {
         while (1) {
-          if (!WiFiAX25.loopTX()) {
-            vTaskDelay(pdMS_TO_TICKS(500));
-          };
+          WiFiAX25.taskTX(portMAX_DELAY);
         }
       },
       "WiFiAX25TXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
 #endif
 
-  static QueueHandle_t MyBeaconTXQ = xQueueCreate(10, sizeof(AX25UI));
+  static QueueHandle_t MyBeaconTXQ = xQueueCreate(1, sizeof(AX25UI));
   static MyBeaconTask MyBeacon(aprsHere, MyBeaconTXQ);
 
   // Beacon
@@ -220,7 +216,9 @@ void setup() {
             if (ui.isIGATEable()) {
               ui.AppendDigiCall(c.callsign.c_str());
               ui.AppendDigiCall("I");  // http://www.aprs-is.net/q.aspx , to set qAR.
-              xQueueSend(UserToWiFiAX25Q, &ui, portMAX_DELAY);
+              if (xQueueSend(UserToWiFiAX25Q, &ui, portMAX_DELAY) != pdTRUE) {
+                Serial.println("Error on UserToWiFiAX25Q");
+              }
             }
 #endif
           }
@@ -252,10 +250,14 @@ void setup() {
                     goto done;
                   }
                 }
-                ui.EraseDigiCalls();
-                ui.AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
-                ui.AppendDigiCall((c.callsign + "*").c_str());
-                xQueueSend(UserToLoRaAX25Q, &ui, portMAX_DELAY);
+                if (aprsThere.HasLocation()) {
+                  ui.EraseDigiCalls();
+                  ui.AppendDigiCall("TCPIP");  // http://www.aprs-is.net/IGateDetails.aspx
+                  ui.AppendDigiCall((c.callsign + "*").c_str());
+                  if (xQueueSend(UserToLoRaAX25Q, &ui, portMAX_DELAY) != pdTRUE) {
+                    Serial.println("Error on UserToLoRaAX25Q");
+                  }
+                }
               } else {
                 if (LoRaAX25.TXQueueSize() == 0) {
                   distanceCentiMeter *= 1.05;
@@ -278,12 +280,16 @@ void setup() {
           AX25UI ui;
           if (xQueueReceive(MyBeaconTXQ, &ui, portMAX_DELAY) == pdTRUE) {
 #ifdef ENABLE_WIFI
-            xQueueSendToFront(UserToWiFiAX25Q, &ui, portMAX_DELAY);
+            if (xQueueSendToFront(UserToWiFiAX25Q, &ui, portMAX_DELAY) != pdTRUE) {
+              Serial.println("Error on UserToWiFiAX25Q");
+            }
 #endif
             if (c.beacon.digipath != "") {
               ui.AppendDigiCall(c.beacon.digipath.c_str());
             }
-            xQueueSendToFront(UserToLoRaAX25Q, &ui, portMAX_DELAY);
+            if (xQueueSendToFront(UserToLoRaAX25Q, &ui, portMAX_DELAY) != pdTRUE) {
+              Serial.println("Error on UserToLoRaAX25Q");
+            }
           }
         }
       },

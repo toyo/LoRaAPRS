@@ -28,7 +28,9 @@ void MyBeaconTask::task(portTickType xBlockTime) {
     Serial.println("Send Beacon");
     if (aprs.getLatLng().isValid()) {
       AX25UI ui(aprs.Encode(), CallSign.c_str(), aprs.getToCall().c_str());
-      xQueueSendToFront(TXQueue, &ui, portMAX_DELAY);
+      if (xQueueSendToFront(TXQueue, &ui, portMAX_DELAY) != pdTRUE) {
+        Serial.println("Error on MyBeacon::TXQueue");
+      }
     }
     vTaskDelay(pdMS_TO_TICKS(1000));
     while (xSemaphoreTake(beaconSemaphore, 0) == pdTRUE)

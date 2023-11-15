@@ -42,7 +42,6 @@ class SX1278Task : public LoRaTask {
   float getRSSI() { return sx->getRSSI(); }
   float getSNR() { return sx->getSNR(); }
 
-  bool loop();
   bool taskRX(portTickType xBlockTime);
 };
 #endif

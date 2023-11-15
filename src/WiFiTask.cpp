@@ -36,8 +36,7 @@ bool WiFiTask::setup(LatLng *l, uint distKm, const char *callsign, const char *p
   return true;
 }
 
-bool WiFiTask::loop(const char *SSID, const char *password) {
-  bool isDo = false;
+void WiFiTask::task(const char *SSID, const char *password) {
 #ifdef ENABLE_WIFI
   if (!client.connected()) {
     wl_status_t status = WiFi.status();
@@ -51,7 +50,6 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
       if ((laststatus == WL_NO_SHIELD || laststatus == WL_CONNECTED) && status != WL_CONNECTED) {
         Serial.print(F("Connecting to "));
         Serial.println(SSID);
-        vTaskDelay(1);
         WiFi.begin(SSID, password);
       } else if (laststatus != WL_CONNECTED && status == WL_CONNECTED) {
         Serial.print(F("WiFi connected. Local IPv4: "));
@@ -83,51 +81,58 @@ bool WiFiTask::loop(const char *SSID, const char *password) {
         Serial.println(F("connection failed."));
         // return false;
       }
+    } else {
+      vTaskDelay(pdMS_TO_TICKS(100));
     }
-    isDo = true;
   } else
 #endif  // ENABLE_WIFI
   {
 #ifdef ENABLE_WIFI
-    while (client.available() > 0) {
-      *endptr = (uint8_t)client.read();
-      if (*endptr == '\r' || *endptr == '\n') {  // APRS server send [CR][LF].
-        if (recvline == endptr) {
-          continue;
-        } else {
-          if (recvline[0] != '#') {
-            Payload pkt(recvline, endptr - recvline);
-            if (xQueueSend(WifiRXQ, &pkt, 0) != pdPASS) {
-              Serial.println("WiFi RX Buffer Overflow, continues.");
-              Serial.print("NO ");
-            }
-            Serial.print("APRSIS->:");
-            Serial.println(pkt.toString());
+    if (client.available() > 0) {
+      while (client.available() > 0) {
+        *endptr = (uint8_t)client.read();
+        if (*endptr == '\r' || *endptr == '\n') {  // APRS server send [CR][LF].
+          if (recvline == endptr) {
+            continue;
           } else {
-            *endptr = '\0';
-            Serial.println((char *)recvline);
+            if (recvline[0] != '#') {
+              Payload pkt(recvline, endptr - recvline);
+              if (xQueueSend(WifiRXQ, &pkt, 0) != pdPASS) {
+                Serial.println("WiFi RX Buffer Overflow, continues.");
+                Serial.print("NO ");
+              }
+              Serial.print("APRSIS->: ");
+              Serial.println(pkt.toString());
+            } else {
+              *endptr = '\0';
+              Serial.println((char *)recvline);
+            }
+            endptr = recvline;
+            break;
           }
-          endptr = recvline;
-          break;
         }
+        endptr++;
       }
-      endptr++;
-      isDo = true;
     }
 #endif  // ENABLE_WIFI
 
-    Payload xmit((const unsigned char *)"", 0);
-    while (xQueueReceive(WifiTXQ, &xmit, 0) == pdTRUE) {
+    Payload xmit1((const unsigned char *)"", 0);
+    if (xQueueReceive(WifiTXQ, &xmit1, 0) == pdTRUE) {
 #ifdef ENABLE_WIFI
+      Payload xmit(xmit1, true);
       if (enableTX) {
         Serial.print(F("APRSIS<-: "));
         Serial.println(xmit.toString());
         client.write(xmit.getData(), xmit.getLen());
       }
 #endif  // ENABLE_WIFI
-      isDo = true;
     }
+#ifdef ENABLE_WIFI
+    else {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
+#endif
   }
 
-  return isDo;
+  return;
 }

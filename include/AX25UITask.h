@@ -29,7 +29,7 @@ class AX25UITask {
   void addUITRACE(String _UITRACE);
 
   void taskRX(portTickType xBlockTime);
-  bool loopTX();
+  void taskTX(portTickType xBlockTime);
 
   size_t TXQueueSize();
 };

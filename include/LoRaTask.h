@@ -41,7 +41,7 @@ class LoRaTask {
 
   bool setup(PhysicalLayer* pl);
 
-  bool taskTX();
+  bool taskTX(portTickType xBlockTime);
 
   bool TXDone();
 };

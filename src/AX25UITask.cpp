@@ -18,7 +18,7 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
   if (xQueueReceive(PayloadRXQ, &recvd, xBlockTime) == pdTRUE) {
     AX25UI ui(recvd.getData(), recvd.getLen());
     if (!ui.isNull()) {
-      if (xQueueSend(AX25UIRXQ, &ui, 0) != pdTRUE) {
+      if (xQueueSend(AX25UIRXQ, &ui, xBlockTime) != pdTRUE) {
         Serial.println("error sending AX25 to user.");
       }
       if (digipeat) {  // work as digi.
@@ -31,7 +31,9 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
             if (nextDigi == CallSign) {                      // Next digipeater call is mine.
               AX25UI digiUi(ui);
               digiUi.setToDigiCall((CallSign + "*").c_str(), digiindex);
-              xQueueSendToFront(AX25UITXQ, &digiUi, portMAX_DELAY);
+              if (xQueueSendToFront(AX25UITXQ, &digiUi, xBlockTime) != pdTRUE) {
+                Serial.println("error sending digipeat by MYCALL.");
+              }
             } else {
               int index = nextDigi.indexOf('-');
               if (index != -1) {                                 // Has SSID
@@ -44,7 +46,9 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
                   if (digissid > 0) {
                     digiUi.addToDigiCall((digicall + "-" + digissid).c_str(), digiindex + 1);
                   }
-                  xQueueSendToFront(AX25UITXQ, &digiUi, portMAX_DELAY);
+                  if (xQueueSendToFront(AX25UITXQ, &digiUi, xBlockTime) != pdTRUE) {
+                    Serial.println("error sending digipeat by UITRACE.");
+                  }
                 }
               }
             }
@@ -55,19 +59,19 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
   }
 }
 
-bool AX25UITask::loopTX() {
-  bool isDo = false;
-  while (uxQueueMessagesWaiting(AX25UITXQ) != 0 && uxQueueMessagesWaiting(PayloadTXQ) == 0) {
-    AX25UI ui;
-    if (xQueueReceive(AX25UITXQ, &ui, 0) == pdTRUE) {
-      if (!ui.isNull()) {
-        Payload uip(ui.Encode());
-        xQueueSend(PayloadTXQ, &uip, portMAX_DELAY);
+void AX25UITask::taskTX(portTickType xBlockTime) {
+  while (uxQueueMessagesWaiting(PayloadTXQ) != 0) vTaskDelay(pdMS_TO_TICKS(100));
+  AX25UI ui;
+  if (xQueueReceive(AX25UITXQ, &ui, xBlockTime) == pdTRUE) {
+    if (!ui.isNull()) {
+      Payload uip(ui.Encode());
+      if (xQueueSend(PayloadTXQ, &uip, xBlockTime) != pdTRUE) {
+        Serial.println("error sending AX25.");
       }
-      isDo = true;
     }
   }
-  return isDo;
+
+  return;
 }
 
 size_t AX25UITask::TXQueueSize() { return uxQueueMessagesWaiting(AX25UITXQ) + uxQueueMessagesWaiting(PayloadTXQ); }

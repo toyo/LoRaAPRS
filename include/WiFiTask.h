@@ -59,6 +59,6 @@ class WiFiTask {
   bool setup(LatLng *l, uint distKm = 50, const char *callsign = "N0CALL", const char *passcode = "00000",
              const char *host = "rotate.aprs2.net", const int httpPort = 14580, bool enableRX = true,
              bool enableTX = true);
-  bool loop(const char *SSID, const char *password);
+  void task(const char *SSID, const char *password);
 };
 #endif

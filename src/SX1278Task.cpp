@@ -190,11 +190,11 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
     int irqflags = sx->getIRQFlags();
 
     if (irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE) {
-      RXEnd = millis();
-
       size_t len = sx->getPacketLength();
       uint8_t buffer[256];
       int state = sx->readData(buffer, len);
+
+      RXEnd = millis();
 
       if (buffer[0] == '<' && buffer[1] == '\xff' && buffer[2] == '\x01') {
         uint8_t* data = buffer;
@@ -228,10 +228,10 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
         if (pkt.getCRCErr()) {
           Serial.println(F("[CRCErr]"));
         } else {
+          Serial.println();
           if (xQueueSend(AX25UI_RXQ, &pkt, 0) != pdPASS) {
             Serial.println("Cannot enqueue on LoRa.");
           }
-          Serial.println();
         }
       }
 
@@ -240,7 +240,7 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
       }
 
       RXCarrierDetected = 0;
-    }
+    }  // RADIOLIB_SX127X_CLEAR_IRQ_FLAG_RX_DONE
 
     if (irqflags & RADIOLIB_SX127X_CLEAR_IRQ_FLAG_TX_DONE) {
       if (!TXDone()) {
@@ -250,15 +250,6 @@ bool SX1278Task::taskRX(portTickType xBlockTime) {
     return true;
   }
   return false;
-}
-
-bool SX1278Task::loop() {
-  bool isDo = false;
-
-  isDo = taskTX() || isDo;
-  isDo = taskRX(0) || isDo;
-
-  return isDo;
 }
 
 bool SX1278Task::startReceive() const {

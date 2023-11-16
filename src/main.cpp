@@ -153,16 +153,21 @@ void setup() {
           Wifi.setup(&aprsHere.getLatLng(), 100, c.callsign.c_str(), c.passcode.c_str(), c.aprs_is.server.c_str());
         }
         while (1) {
-          Wifi.task(c.wifi.SSID.c_str(), c.wifi.password.c_str());
+#ifdef ENABLE_WIFI
+          if (!Wifi.client.connected()) {
+            Wifi.connect(c.wifi.SSID.c_str(), c.wifi.password.c_str());
+          } else
+#endif  // ENABLE_WIFI
+          {
+#ifdef ENABLE_WIFI
+            Wifi.taskRX(0);
+#endif  // ENABLE_WIFI
+            Wifi.taskTX(0);
+            vTaskDelay(pdMS_TO_TICKS(100));
+          }
         }
       },
       "WiFiTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
-
-#endif
-
-  //
-
-#ifdef ENABLE_WIFI
 
   static QueueHandle_t WiFiAX25toUserQ = xQueueCreate(4, sizeof(AX25UI));
   static QueueHandle_t UserToWiFiAX25Q = xQueueCreate(4, sizeof(AX25UI));
@@ -186,7 +191,7 @@ void setup() {
       },
       "WiFiAX25TXTask", 4096, NULL, 1, NULL, CONFIG_ARDUINO_RUNNING_CORE);
 
-#endif
+#endif  // ENABLE_WIFI
 
   static QueueHandle_t MyBeaconTXQ = xQueueCreate(1, sizeof(AX25UI));
   static MyBeaconTask MyBeacon(aprsHere, MyBeaconTXQ);
@@ -220,7 +225,7 @@ void setup() {
                 Serial.println("Error on UserToWiFiAX25Q");
               }
             }
-#endif
+#endif  // ENABLE_WIFI
           }
         }
       },
@@ -241,7 +246,7 @@ void setup() {
             }
             if (distList.find(ui.getFromCall()) != distList.end()) {
               if (distList[ui.getFromCall()] < distanceCentiMeter) {
-                size_t txQueueSize = LoRaAX25.TXQueueSize();
+                size_t txQueueSize = uxQueueMessagesWaiting(UserToLoRaAX25Q) + uxQueueMessagesWaiting(AX25ToLoRaQ);
                 if (txQueueSize >= 1) {
                   distanceCentiMeter /= pow(1.05, txQueueSize);
                   Serial.println(String(F("Distance decrease: ")) + distanceCentiMeter / 100 + F("m, more ") +
@@ -259,7 +264,7 @@ void setup() {
                   }
                 }
               } else {
-                if (LoRaAX25.TXQueueSize() == 0) {
+                if (uxQueueMessagesWaiting(UserToLoRaAX25Q) + uxQueueMessagesWaiting(AX25ToLoRaQ) == 0) {
                   distanceCentiMeter *= 1.05;
                   Serial.println(String(F("Distance increase: ")) + distanceCentiMeter / 100 + F("m."));
                 }

@@ -30,7 +30,5 @@ class AX25UITask {
 
   void taskRX(portTickType xBlockTime);
   void taskTX(portTickType xBlockTime);
-
-  size_t TXQueueSize();
 };
 #endif

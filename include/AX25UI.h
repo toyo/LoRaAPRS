@@ -22,7 +22,7 @@ class AX25UI {
   bool isNull() const { return FromCall[0] == 0; }
   bool isIGATEable() const;
 
-  String getDigiCalls(int i) const { return DigiCalls[i]; };
+  const char* getDigiCalls(int i) const { return DigiCalls[i]; };
 
   bool findDigiCall(const char* _call) const {
     for (int i = 0; i < numDigiCalls; i++) {
@@ -35,15 +35,19 @@ class AX25UI {
   int8_t findNextDigiIndex() const {
     int len = numDigiCalls;
     for (int digiindex = 0; digiindex < len; digiindex++) {
-      if (String(DigiCalls[digiindex]).indexOf("*") == -1) {
-        return digiindex;
+      if (strchr(DigiCalls[digiindex], '*') != NULL) {
+        if (digiindex + 1 < len) {
+          return digiindex + 1;
+        } else {
+          return -1;
+        }
       }
     }
-    return -1;
+    return 0;
   }
   const char* getFromCall() { return FromCall; }
-  String GetToCall() const { return ToCall; }
-  String Payload() const { return message; }
+  const char* GetToCall() const { return ToCall; }
+  const char* Payload() const { return message; }
   void setToDigiCall(const char* call, int num) {
     strlcpy(DigiCalls[num], call, MAXCALLSIGNLEN);
     if (numDigiCalls < num) {

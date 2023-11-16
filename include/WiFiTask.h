@@ -12,7 +12,6 @@
 
 class WiFiTask {
 #ifdef ENABLE_WIFI
-  WiFiClient client;
   wl_status_t laststatus = WL_NO_SHIELD;
 
   char callsign[16];
@@ -56,9 +55,16 @@ class WiFiTask {
  public:
   WiFiTask(QueueHandle_t &_RXQ, QueueHandle_t &_TXQ) : WifiRXQ(_RXQ), WifiTXQ(_TXQ){};
 
+#ifdef ENABLE_WIFI
+  WiFiClient client;
+#endif
+
   bool setup(LatLng *l, uint distKm = 50, const char *callsign = "N0CALL", const char *passcode = "00000",
              const char *host = "rotate.aprs2.net", const int httpPort = 14580, bool enableRX = true,
              bool enableTX = true);
-  void task(const char *SSID, const char *password);
+
+  void connect(const char *SSID, const char *password);
+  void taskRX(portTickType xBlockTime);
+  void taskTX(portTickType xBlockTime);
 };
 #endif

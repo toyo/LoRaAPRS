@@ -56,7 +56,7 @@ class APRS {  // see http://www.aprs.org/doc/APRS101.PDF
 
   // Decode from String.
   APRS(const char *ss, const char *ToCall) : ll(*new LatLng) { Decode(ss, ToCall); };
-  APRS(AX25UI ui) : ll(*new LatLng) { Decode(ui.Payload().c_str(), ui.GetToCall().c_str()); };
+  APRS(AX25UI ui) : ll(*new LatLng) { Decode(ui.Payload(), ui.GetToCall()); };
 
   // Set lat/lng manually.
   APRS(LatLng &_ll)

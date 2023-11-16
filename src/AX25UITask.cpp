@@ -26,7 +26,7 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
             strncmp(ui.getFromCall(), CallSign.c_str(), MAXCALLSIGNLEN) != 0) {
           // my call is not in digipeated list or sender.
           int digiindex;
-          if ((digiindex = ui.findNextDigiIndex()) != -1) {  // All listed calls are not digipeated.
+          if ((digiindex = ui.findNextDigiIndex()) != -1) {  // found next digi.
             String nextDigi = ui.getDigiCalls(digiindex);    // Got next digipeater call
             if (nextDigi == CallSign) {                      // Next digipeater call is mine.
               AX25UI digiUi(ui);
@@ -60,10 +60,10 @@ void AX25UITask::taskRX(portTickType xBlockTime) {
 }
 
 void AX25UITask::taskTX(portTickType xBlockTime) {
-  while (uxQueueMessagesWaiting(PayloadTXQ) != 0) vTaskDelay(pdMS_TO_TICKS(100));
   AX25UI ui;
   if (xQueueReceive(AX25UITXQ, &ui, xBlockTime) == pdTRUE) {
     if (!ui.isNull()) {
+      while (uxQueueMessagesWaiting(PayloadTXQ) != 0) vTaskDelay(pdMS_TO_TICKS(1000));
       Payload uip(ui.Encode());
       if (xQueueSend(PayloadTXQ, &uip, xBlockTime) != pdTRUE) {
         Serial.println("error sending AX25.");
@@ -73,5 +73,3 @@ void AX25UITask::taskTX(portTickType xBlockTime) {
 
   return;
 }
-
-size_t AX25UITask::TXQueueSize() { return uxQueueMessagesWaiting(AX25UITXQ) + uxQueueMessagesWaiting(PayloadTXQ); }
